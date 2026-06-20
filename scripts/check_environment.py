@@ -19,9 +19,16 @@ def check_torch():
         import torch
         cuda = torch.cuda.is_available()
         device = "cuda" if cuda else "cpu"
-        print(f"OK  torch (device: {device})")
+        print(f"OK  torch {torch.__version__} (device: {device})")
+        if not cuda:
+            print("WARN  CUDA not available — training will be slow on CPU")
+            return
+        print(f"OK  GPU: {torch.cuda.get_device_name(0)}")
+        x = torch.randn(1000, 1000, device='cuda')
+        y = x @ x
+        print(f"OK  GPU compute verified (result device: {y.device})")
     except ImportError:
-        print("WARN  torch not installed (needed for training)")
+        print("FAIL  torch not installed (needed for training)")
 
 if __name__ == "__main__":
     print("Checking environment...\n")

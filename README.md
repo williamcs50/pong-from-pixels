@@ -10,6 +10,14 @@ cd pong-from-pixels
 pip install -r requirements.txt
 ```
 
+## Verify your environment
+
+```bash
+python scripts/check_environment.py
+```
+
+Confirms Gymnasium + Pong, PyTorch version, CUDA availability, GPU name, and a live matrix multiply on the GPU.
+
 ## Run the random agent
 
 ```bash

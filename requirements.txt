@@ -1,3 +1,15 @@
 gymnasium
 ale-py
 pygame
+
+# torch is not listed here because the right install command depends on your hardware.
+# Install manually before running pip install -r requirements.txt:
+#
+#   Windows/Linux + NVIDIA GPU (CUDA 12.6):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+#
+#   Mac (Apple Silicon, MPS):
+#   pip install torch
+#
+#   CPU only:
+#   pip install torch
