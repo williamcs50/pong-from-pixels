@@ -58,6 +58,7 @@
 ## What's open (carrying forward)
 
 - Replay buffer will be deferred to next session.
+- Before next session: save a preprocessed frame as a PNG with `cv2.imwrite` and confirm the ball is visible. This is the one verification the test suite cannot do.
 
 ## Anything surprising or worth flagging
 
