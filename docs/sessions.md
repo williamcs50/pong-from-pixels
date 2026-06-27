@@ -44,7 +44,7 @@
 
 **Date:** 2026-06-27
 
-**Floor:** `src/preprocess.py` written, tested with a real Pong frame, output verified (shape, dtype, value range), and committed.
+**Floor:** `src/preprocess.py` written, tested with a real Pong frame, output verified (shape, dtype, and value range), and committed. Visual inspection of a saved frame still pending.
 
 **Aspiration:** All of that, plus the replay buffer also written, verified in isolation (store, sample, overflow behavior), and committed. Two components, both verified, both in the repo.
 
@@ -53,12 +53,13 @@
 ## What landed today
 
 - `src/preprocess.py` written and committed. Grayscale conversion, resize to 84x84, and frame stacking across a sliding window of 4 frames.
-- `tests/test_preprocess.py` passes all tests against a real Pong frame. Shape, dtype, and value range all verified.
+- `tests/test_preprocess.py` passes all tests against a real Pong frame. Shape, dtype, and value range verified. Visual inspection of a saved frame still pending.
 
 ## What's open (carrying forward)
 
 - Replay buffer will be deferred to next session.
 - Before next session: save a preprocessed frame as a PNG with `cv2.imwrite` and confirm the ball is visible. This is the one verification the test suite cannot do.
+- The preprocessor outputs HWC format (84, 84, 4). The NCHW transpose needed by the network will be handled in the agent, not here.
 
 ## Anything surprising or worth flagging
 
