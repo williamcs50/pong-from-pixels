@@ -3,7 +3,7 @@ import numpy as np
 from collections import deque
 
 class Preprocessor:
-    def __init__(self, stack_size: int = 4, frame_size: tuple = (84, 84)):
+    def __init__(self, stack_size: int = 4, frame_size: tuple[int, int] = (84, 84)) -> None:
         self.stack_size = stack_size
         self.frame_size = frame_size
         self.frame_stack = deque(maxlen=stack_size)
