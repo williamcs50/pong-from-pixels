@@ -64,3 +64,28 @@
 ## Anything surprising or worth flagging
 
 - Coming into this session, I had no prior experience with OpenCV. Getting familiar with the grayscale conversion and resize API was the first real step before writing `src/preprocess.py`.
+
+---
+
+# Saturday: Replay Buffer
+
+**Date:** 2026-07-04
+
+**Floor:** `src/replay_buffer.py` hand-built and verified in isolation. Push transitions, sample batches, assert shapes, and confirm circular overwrite when the buffer fills. Committed.
+
+**Aspiration:** All of that, plus the Q-network and target network written and verified with a GPU forward pass. A dummy batch through CUDA, output shape confirmed at (B, n_actions), loss.backward() runs without error, and target weights decoupled and syncable. The HWC to NCHW transpose and /255 normalization also land here.
+
+---
+
+## What landed today
+
+- `src/replay_buffer.py` was written and committed.
+- `tests/test_replay_buffer.py` passes all tests: shapes and dtypes, circular overwrite, state and next_state pairing, and error handling when `batch_size` exceeds the number of stored transitions.
+
+## What's open (carrying forward)
+
+- Floor was met. Aspiration not reached. Q-network and target network deferred to next session.
+
+## Anything surprising or worth flagging
+
+- I assumed the replay buffer capacity would match the original DQN paper at 1 million transitions. Working through the actual memory budget brought it down. Each state is 84 x 84 x 4 = 28,224 bytes as uint8. Storing both state and next_state per transition doubles that to 56,448 bytes. With 16 GB RAM minus roughly 5 GB for OS, PyTorch, and the CUDA context, about 11 GB is available. That buys around 195,000 transitions. 100,000 was chosen as a conservative starting point.
