@@ -89,3 +89,28 @@
 ## Anything surprising or worth flagging
 
 - I assumed the replay buffer capacity would match the original DQN paper at 1 million transitions. Working through the actual memory budget brought it down. Each state is 84 x 84 x 4 = 28,224 bytes as uint8. Storing both state and next_state per transition doubles that to 56,448 bytes. With 16 GB RAM minus roughly 5 GB for OS, PyTorch, and the CUDA context, about 11 GB is available. That buys around 195,000 transitions. 100,000 was chosen as a conservative starting point.
+
+---
+
+# Saturday: Q-Network
+
+**Date:** 2026-07-11
+
+**Floor:** The day counts as a win if the Q-network and target network are both hand-built and verified in isolation, then committed. That means a dummy batch of shape (B, 4, 84, 84) on CUDA produces output of shape (B, n_actions), lands on the GPU, runs loss.backward() cleanly, and leaves the target network weights unchanged after an optimizer step on the Q-network until they are synced. The transpose and division by 255 also live in one consistent place on every path into the network.
+
+**Aspiration:** If time allows, the stretch goal is to build and verify an epsilon-greedy action selector. With epsilon = 1, it should behave like uniform random selection, and with epsilon = 0, it should behave like deterministic argmax selection. That would exercise the full action path end to end: stacked frame, transform, network, and action.
+
+---
+
+## What landed today
+
+- The Q-network was designed, built, and tested. Its shape, device placement, gradients, and output sanity were all confirmed. The transform site, activation placement, and dynamic action-count handling were all deliberate choices, and each one is easy to defend.
+
+## What's open (carrying forward)
+
+- The target network and action selector are still open. Both are small implementation steps, and the target network is basically a second QNetwork instance plus a simple weight-copy routine.
+
+## Anything surprising or worth flagging
+
+- The main surprise was how little code was needed to verify the Q-network end to end once the architecture and tests were in place.
+- I did not fully account for the target network until the end, so I deferred it to the next session.
