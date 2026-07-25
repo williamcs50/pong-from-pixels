@@ -33,26 +33,24 @@ def test_preprocess_shape():
 def test_preprocess_dtype():
     p = Preprocessor()
     result = p.preprocess(make_real_pong_frame())
-    assert result.dtype == np.uint8, f"Expected uint8, got {result.dtype}"
+    assert result.dtype == np.float32, f"Expected float32, got {result.dtype}"
     print("PASS  preprocess dtype (real frame)")
 
 
 def test_preprocess_value_range():
-    """
-    New test: verify value range for uint8 grayscale image.
-    For uint8 grayscale, min should be >=0 and max <=255.
-    """
+    """Verify normalized float32 grayscale values in the expected range."""
     p = Preprocessor()
     result = p.preprocess(make_real_pong_frame())
-    assert result.min() >= 0, f"Min pixel value {result.min()} < 0"
-    assert result.max() <= 255, f"Max pixel value {result.max()} > 255"
+    assert result.min() >= 0.0, f"Min pixel value {result.min()} < 0"
+    assert result.max() <= 1.0, f"Max pixel value {result.max()} > 1"
     print(f"PASS  preprocess value range (min={result.min()}, max={result.max()}) (real frame)")
 
 
 def test_reset_shape():
     p = Preprocessor()
     stacked = p.reset(make_real_pong_frame())
-    assert stacked.shape == (84, 84, 4), f"Expected (84, 84, 4), got {stacked.shape}"
+    assert stacked.shape == (4, 84, 84), f"Expected (4, 84, 84), got {stacked.shape}"
+    assert stacked.dtype == np.float32, f"Expected float32, got {stacked.dtype}"
     print("PASS  reset output shape (real frame)")
 
 
@@ -60,7 +58,7 @@ def test_reset_fills_stack():
     p = Preprocessor()
     stacked = p.reset(make_real_pong_frame())
     for i in range(4):
-        assert np.array_equal(stacked[:, :, 0], stacked[:, :, i]), "All frames should be equal after reset"
+        assert np.array_equal(stacked[0], stacked[i]), "All frames should be equal after reset"
     print("PASS  reset fills stack with repeated frame (real frame)")
 
 
@@ -68,7 +66,8 @@ def test_step_shape():
     p = Preprocessor()
     p.reset(make_real_pong_frame())
     stacked = p.step(make_real_pong_frame(seed=43))  # different seed -> different starting obs
-    assert stacked.shape == (84, 84, 4), f"Expected (84, 84, 4), got {stacked.shape}"
+    assert stacked.shape == (4, 84, 84), f"Expected (4, 84, 84), got {stacked.shape}"
+    assert stacked.dtype == np.float32, f"Expected float32, got {stacked.dtype}"
     print("PASS  step output shape (real frame)")
 
 
@@ -79,7 +78,7 @@ def test_step_updates_stack():
     p = Preprocessor()
     p.reset(make_fake_frame())
     stacked = p.step(make_fake_frame())
-    assert not np.array_equal(stacked[:, :, 0], stacked[:, :, 3]), "Frames should differ after step"
+    assert not np.array_equal(stacked[0], stacked[3]), "Frames should differ after step"
     print("PASS  step updates stack")
 
 

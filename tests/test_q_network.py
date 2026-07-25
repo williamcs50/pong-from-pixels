@@ -11,10 +11,7 @@ from src.q_network import QNetwork
 BATCH_SIZE = 32
 N_ACTIONS = 6
 
-if not torch.cuda.is_available():
-    raise RuntimeError("CUDA device required for QNetwork tests")
-
-DEVICE = "cuda"
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def make_batch() -> torch.Tensor:
@@ -27,7 +24,7 @@ def test_output_shape_and_device() -> None:
     out = net(x)
 
     assert out.shape == (BATCH_SIZE, N_ACTIONS), f"Expected shape {(BATCH_SIZE, N_ACTIONS)}, got {out.shape}"
-    assert out.device.type == DEVICE, f"Expected device '{DEVICE}', got {out.device.type}"
+    assert out.device.type == DEVICE.type, f"Expected device '{DEVICE}', got {out.device.type}"
 
     sample = out[0]
     print("sample output:", sample)

@@ -29,10 +29,11 @@ cv2.imwrite(os.path.join(script_dir, "raw_frame.png"), cv2.cvtColor(obs, cv2.COL
 # Preprocess and save
 prep = Preprocessor()
 processed = prep.preprocess(obs)
-cv2.imwrite(os.path.join(script_dir, "preprocessed_frame.png"), processed)
+save_img = (processed * 255).astype(np.uint8)
+cv2.imwrite(os.path.join(script_dir, "preprocessed_frame.png"), save_img)
 
 # 6x magnification with nearest-neighbor so pixels stay crisp
-magnified = cv2.resize(processed, (504, 504), interpolation=cv2.INTER_NEAREST)
+magnified = cv2.resize(save_img, (504, 504), interpolation=cv2.INTER_NEAREST)
 cv2.imwrite(os.path.join(script_dir, "preprocessed_magnified.png"), magnified)
 
 print(f"Raw: {obs.shape}")
