@@ -10,9 +10,11 @@ import cv2
 import gymnasium
 import numpy as np
 
-gymnasium.register_envs(ale_py)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.preprocess import Preprocessor
+
+gymnasium.register_envs(ale_py)
+
 
 env = gymnasium.make("ALE/Pong-v5", render_mode="rgb_array")
 obs, _ = env.reset(seed=42)
