@@ -24,4 +24,4 @@ class QNetwork(nn.Module):
         # no activation on Q-value output
         x = self.fc2(x)
         return x
-    
+
