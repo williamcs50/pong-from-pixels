@@ -2,12 +2,15 @@
 """Save a preprocessed Pong frame for eyeball verification.
 Run, open the PNG, confirm ball + paddles are visible."""
 
+import os
+import sys
+
 import ale_py
-import gymnasium
-gymnasium.register_envs(ale_py)
 import cv2
+import gymnasium
 import numpy as np
-import sys, os
+
+gymnasium.register_envs(ale_py)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.preprocess import Preprocessor
 
