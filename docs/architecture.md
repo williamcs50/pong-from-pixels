@@ -22,7 +22,7 @@ Why: Gymnasium/ALE is pure plumbing. It does not touch how the agent learns.
 
 In: raw frame (210x160x3 uint8 RGB)
 
-Out: stacked observation (84x84x4 uint8)
+Out: stacked observation (4x84x84 float32, normalized [0,1])
 
 Build or import: build
 
@@ -40,7 +40,7 @@ Why: The sampling strategy directly shapes what the agent learns and how stable 
 
 ### Q-Network
 
-In: stacked observation (84x84x4)
+In: stacked observation (4x84x84)
 
 Out: Q-value estimate for each action
 
@@ -50,7 +50,7 @@ Why: The number of layers, kernel sizes, and strides in the conv stack determine
 
 ### Target network
 
-In: stacked observation (84x84x4)
+In: stacked observation (4x84x84)
 
 Out: Q-value estimate for each action (frozen weights)
 
@@ -89,6 +89,7 @@ Batch size starts at 32 or 64 and profiles upward. Both networks, activations, g
 ## Files
 
 ```
+src/action_selector.py       Action selector
 src/preprocess.py            Preprocessing
 src/q_network.py             Q-Network and target-network logic
 src/random_agent.py          Baseline random agent

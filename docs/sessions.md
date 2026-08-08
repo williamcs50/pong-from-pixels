@@ -2,16 +2,16 @@
 
 **Date:** 2026-06-06
 
-**Floor:** Pong rendering on screen (random agent) + repo live with first commit
+**Floor:** Pong rendering on screen with the random agent, and the repo live with its first commit.
 
-**Aspiration:** GPU verified and doing ML work
+**Aspiration:** The GPU verified and doing real ML work.
 
 ---
 
 ## What landed today
 
-- Pong renders on the screen (random agent)
-- Repo is live
+- Pong renders on the screen with the random agent.
+- The repo is live.
 
 ## Anything surprising or worth flagging
 
@@ -23,7 +23,7 @@
 
 **Date:** 2026-06-20
 
-**Floor:** GPU verified and working. A tensor on CUDA, a small matmul, confirmation that the 2060 is live. Plus: a written architecture diagram in a markdown file, showing every component of the DQN with build/import labels and a sentence on why for each one.
+**Floor:** The GPU verified and working. A tensor on CUDA, a small matmul, confirmation that the 2060 is live. Also, a written architecture diagram in a markdown file, showing every component of the DQN with build or import labels and a sentence on why for each one.
 
 **Aspiration:** All of that, plus the first built component has code. Maybe it's the replay buffer. Maybe it's the preprocessing pipeline. Something you can push to the repo that isn't just a plan. It's the plan starting to become real.
 
@@ -52,7 +52,7 @@
 
 ## What landed today
 
-- `src/preprocess.py` written and committed. Grayscale conversion, resize to 84x84, and frame stacking across a sliding window of 4 frames.
+- `src/preprocess.py` written and committed. Grayscale conversion, resize to 84 x 84, and frame stacking across a sliding window of 4 frames.
 - `tests/test_preprocess.py` passes all tests against a real Pong frame. Shape, dtype, and value range verified. Visual inspection of a saved frame still pending.
 
 ## What's open (carrying forward)
@@ -73,7 +73,7 @@
 
 **Floor:** `src/replay_buffer.py` hand-built and verified in isolation. Push transitions, sample batches, assert shapes, and confirm circular overwrite when the buffer fills. Committed.
 
-**Aspiration:** All of that, plus the Q-network and target network written and verified with a GPU forward pass. A dummy batch through CUDA, output shape confirmed at (B, n_actions), loss.backward() runs without error, and target weights decoupled and syncable. The HWC to NCHW transpose and /255 normalization also land here.
+**Aspiration:** All of that, plus the Q-network and target network written and verified with a GPU forward pass. A dummy batch through CUDA, output shape confirmed at (B, n_actions), `loss.backward()` runs without error, and target weights decoupled and syncable. The HWC to NCHW transpose and /255 normalization also land here.
 
 ---
 
@@ -96,7 +96,7 @@
 
 **Date:** 2026-07-11
 
-**Floor:** The day counts as a win if the Q-network and target network are both hand-built and verified in isolation, then committed. That means a dummy batch of shape (B, 4, 84, 84) on CUDA produces output of shape (B, n_actions), lands on the GPU, runs loss.backward() cleanly, and leaves the target network weights unchanged after an optimizer step on the Q-network until they are synced. The transpose and division by 255 also live in one consistent place on every path into the network.
+**Floor:** The day counts as a win if the Q-network and target network are both hand-built and verified in isolation, then committed. That means a dummy batch of shape (B, 4, 84, 84) on CUDA produces output of shape (B, n_actions), lands on the GPU, runs `loss.backward()` cleanly, and leaves the target network weights unchanged after an optimizer step on the Q-network until they are synced. The transpose and division by 255 also live in one consistent place on every path into the network.
 
 **Aspiration:** If time allows, the stretch goal is to build and verify an epsilon-greedy action selector. With epsilon = 1, it should behave like uniform random selection, and with epsilon = 0, it should behave like deterministic argmax selection. That would exercise the full action path end to end: stacked frame, transform, network, and action.
 
@@ -140,5 +140,32 @@
 ## Anything surprising or worth flagging
 
 - It had been two weeks since I'd last looked at this code, so getting back up to speed on `q_network.py` took longer than expected. Building the target network and its tests ended up taking more time than planned as a result.
+
+---
+
+# Saturday: Action Selector
+
+**Date:** 2026-08-08
+
+**Floor:** The action selector hand-built and verified. `src/action_selector.py` written, kept separate from the network so it only takes in Q-values and epsilon, and `tests/test_action_selector.py` covering determinism at epsilon 0, uniform exploration at epsilon 1, correct return type, and valid action range. Committed.
+
+**Aspiration:** If time allows, the stretch goal is the transform layer. Two path-specific functions, one for the training path and one for the action selection path, sharing a contract rather than code, that reconcile the preprocessor's normalized 4 x 84 x 84 float32 output with the replay buffer's raw 84 x 84 x 4 uint8 storage and convert it into what the network expects. Neither exists on either path yet, so it is not a matter of combining code that already exists in two places, it is new code. If that lands, the next stretch goal is one integration smoke test that runs the whole pipeline end to end. `env.reset()` through the preprocessor, the transform, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the transform layer and the network again, with no shape, dtype, or device errors anywhere in that chain.
+
+---
+
+## What landed today
+
+- `src/action_selector.py` is built. It takes Q-values, epsilon, and the number of actions, and returns a plain Python int, either the argmax action or a random one. I kept it separate from the network on purpose, so whatever calls the network still owns the `no_grad` context, not the selector.
+- `tests/test_action_selector.py` passes everything I wanted covered. Epsilon 0 always picks the same argmax action, epsilon 1 explores every action roughly evenly, the return type is a real Python int on both branches, and the action always falls inside the valid range. I caught a real bug while writing these tests, the random branch was returning a numpy int instead of a plain Python int.
+- While tracing this, I noticed `architecture.md` had the preprocessor's output and the network's input written down wrong. It described them as 84 x 84 x 4 in uint8, which is actually the replay buffer's storage shape, not what the preprocessor or network use. The real shape is 4 x 84 x 84 in float32. I fixed `architecture.md`.
+
+## What's open (carrying forward)
+
+- The transform layer is still open. Two path-specific functions, one for the training path and one for the action selection path, sharing a contract rather than code, that reconcile the preprocessor's normalized 4 x 84 x 84 float32 output with the replay buffer's raw 84 x 84 x 4 uint8 storage and convert it into what the network expects. Neither exists on either path yet, it is not a matter of combining code that already exists in two places.
+- The integration smoke test is still open. `env.reset()` through the preprocessor, the transform layer, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the transform layer and the network again.
+
+## Anything surprising or worth flagging
+
+- Looking closely at push in `replay_buffer.py`, I found there is no real conversion logic there at all, just a plain assignment. Right now that fails loudly because the shapes do not match. But if I only fixed the shape and left the scaling alone, it would fail silently instead, since a shape-only fix would not correctly map [0, 1] floats into [0, 255] uint8 storage. Both issues come from the same place. I assumed a conversion existed between the preprocessor and the buffer, and it turns out I never actually wrote one.
 
 ---
