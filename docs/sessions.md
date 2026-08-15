@@ -169,3 +169,38 @@
 - Looking closely at push in `replay_buffer.py`, I found there is no real conversion logic there at all, just a plain assignment. Right now that fails loudly because the shapes do not match. But if I only fixed the shape and left the scaling alone, it would fail silently instead, since a shape-only fix would not correctly map [0, 1] floats into [0, 255] uint8 storage. Both issues come from the same place. I assumed a conversion existed between the preprocessor and the buffer, and it turns out I never actually wrote one.
 
 ---
+
+# Saturday: Transform Layer
+
+**Date:** 2026-08-15
+
+**Floor:** `src/preprocess.py` updated: preprocessing stops after resize, returns uint8, frame stack shifts from axis 0 to the last axis, output shape (84, 84, 4) matching the buffer's storage exactly. `push` needs zero conversion logic. `test_preprocess_dtype`, `test_preprocess_value_range`, and the frame stack shape tests updated to match: uint8, 0 to 255, (84, 84, 4). `architecture.md` corrected in the same sitting to say uint8 HWC, not float32 CHW. The shared transform function built: uint8 HWC in, cast to float32, divide by 255, transpose to NCHW, once, right before the network. A test pushes a known frame through preprocess and the transform and asserts the actual returned values, not just shape and dtype, confirming the numbers coming out are the numbers that should come out. Committed.
+
+**Aspiration:** The full pipeline runs end to end as a smoke test: `env.reset()` through the preprocessor, into the buffer, a sampled batch through the transform and the network, out to an action through `select_action`, back through `env.step()`. No shape, dtype, or device errors anywhere in that chain.
+
+---
+
+## What landed today
+
+- No code was committed today. The session went entirely to verification and design, and it earned its keep anyway.
+- The buffer's storage dtype got decided on evidence, not habit. Two state sized arrays at capacity 100,000 cost 5.6448 GB under uint8 versus 22.5792 GB under float32, checked against 31.86 GB of system RAM. Float32 technically fits, but it buys nothing, since the emulator only ever produces uint8 pixels in the first place.
+- Traced the transform's round trip by hand and found it wasn't invertible. `astype(np.uint8)` truncates rather than rounds: 0.5 times 255 is 127.5, casting to uint8 gives 127, not 128, and dividing back gives 0.498039, not 0.5 back.
+- Rounding before the cast would have shrunk that error, not removed it. The actual fix was noticing that two conversions in the pipeline exist only to undo each other, the preprocessor dividing by 255 and the transform multiplying it back. Deleting both instead of patching the cast removes the truncation bug entirely rather than making it smaller.
+- The resulting design is written down precisely enough to build from directly: the preprocessor stops after resize and returns uint8 HWC with no normalization, the buffer takes it raw with no conversion in `push`, and one shared transform sits on the read side, casting to float32, dividing by 255, and transposing to NCHW, used identically by the training path and the action selection path.
+
+## What's open (carrying forward)
+
+- Floor was not met. Nothing got written today, only verified and designed.
+- `src/preprocess.py` still needs the actual change: stop normalizing, return uint8, shift the frame stack from axis 0 to the last axis, output shape (84, 84, 4).
+- `test_preprocess_dtype`, `test_preprocess_value_range`, and the frame stack shape tests still need rewriting to uint8, 0 to 255, (84, 84, 4).
+- `architecture.md` still needs correcting again, to uint8 HWC instead of float32 CHW.
+- The shared transform function itself is still unwritten: uint8 HWC in, float32 NCHW out, one function, both paths.
+- The round trip test is still open: push a known frame through preprocess and the transform and assert on the actual returned values, not just shape and dtype.
+- The end to end smoke test is still the aspiration: `env.reset()` through the preprocessor, into the buffer, a sampled batch through the transform and network, out to an action through `select_action`, back through `env.step()`.
+
+## Anything surprising or worth flagging
+
+- Caught the `push` problem last week by reading the code instead of trusting that a conversion existed. Today's entire session was downstream of that one habit.
+- Three and three quarter hours went to verification and design, zero to code. Not a failure on its own, but a pacing data point worth sitting with honestly: whether the diagnostics ran long because they needed to, or because running one more check felt safer than committing to a claim on the page.
+
+---
