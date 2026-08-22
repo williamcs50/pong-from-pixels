@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class ReplayBuffer:
     def __init__(self, capacity: int) -> None:
         self.capacity = capacity
@@ -14,7 +15,7 @@ class ReplayBuffer:
 
     def __len__(self) -> int:
         return self.size
-    
+
     def push(self, current_state: np.ndarray, action_taken: int, reward: float, next_state: np.ndarray, done: bool) -> None:
         self.current_state[self.position] = current_state
         self.action_taken[self.position] = action_taken
@@ -29,7 +30,6 @@ class ReplayBuffer:
         self.size = min(self.size + 1, self.capacity)
 
     def sample(self, batch_size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-
         if batch_size > self.size:
             raise ValueError(f"Error: There is not enough transitions to sample: You have requested {batch_size}, but have {self.size}")
 

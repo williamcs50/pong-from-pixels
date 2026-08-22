@@ -2,10 +2,10 @@ import gymnasium as gym
 import ale_py
 
 # Create the Pong environment
-env = gym.make('ALE/Pong-v5', render_mode="human")
+env = gym.make("ALE/Pong-v5", render_mode="human")
 
 # Reset the environment
-obs, info = env.reset() 
+obs, info = env.reset()
 
 while True:
     # Pick a random action

@@ -7,6 +7,14 @@ Pong-from-Pixels is a ground-up Deep Q-Network (DQN) project that learns to play
 ```bash
 git clone https://github.com/williamcs50/pong-from-pixels.git
 cd pong-from-pixels
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Mac/Linux
+source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 

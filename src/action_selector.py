@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 
 def select_action(q_values: torch.Tensor, epsilon: float, n_actions: int) -> int:

@@ -97,4 +97,4 @@ if __name__ == "__main__":
     test_circular_overwrite()
     test_state_next_state_pairing()
     test_sample_raises_when_insufficient()
-    print("\nAll tests passed.")
+    print("\nAll tests passed!")

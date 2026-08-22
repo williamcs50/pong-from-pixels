@@ -1,11 +1,12 @@
 import os
 import sys
+
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from src.q_network import QNetwork
 
 
@@ -105,4 +106,4 @@ if __name__ == "__main__":
     test_output_shape_and_device()
     test_backward_pass()
     test_target_network_sync()
-    print("\nAll tests passed for QNetwork.")
+    print("\nAll tests passed!")
