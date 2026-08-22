@@ -2,6 +2,8 @@ gymnasium
 ale-py
 pygame
 opencv-python-headless
+numpy
+pytest
 
 # torch is not listed here because the right install command depends on your hardware.
 # Install manually before running pip install -r requirements.txt:

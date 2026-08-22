@@ -56,4 +56,4 @@ if __name__ == "__main__":
     test_greedy_always_selects_argmax()
     test_explore_selects_all_actions_uniformly()
     test_greedy_handles_requires_grad_tensor()
-    print("\nAll tests passed.")
+    print("\nAll tests passed!")

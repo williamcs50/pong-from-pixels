@@ -1,5 +1,6 @@
 import os
 import sys
+
 import gymnasium as gym
 import ale_py
 import numpy as np
@@ -9,12 +10,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.preprocess import Preprocessor
 
 
-def make_fake_frame():
+def make_fake_frame() -> np.ndarray:
     """Random noise for controlled unit tests (e.g. stack equality/difference)."""
     return np.random.randint(0, 256, (210, 160, 3), dtype=np.uint8)
 
 
-def make_real_pong_frame(seed: int = 42):
+def make_real_pong_frame(seed: int = 42) -> np.ndarray:
     """Return a real observation from ALE/Pong-v5. Used to satisfy floor goal of testing with real Pong frame."""
     env = gym.make("ALE/Pong-v5")
     obs, _ = env.reset(seed=seed)
@@ -22,63 +23,64 @@ def make_real_pong_frame(seed: int = 42):
     return obs
 
 
-def test_preprocess_shape():
+def test_preprocess_shape() -> None:
+    # Use a real Pong frame per floor goal.
     p = Preprocessor()
-    # Use REAL Pong frame per floor goal
     result = p.preprocess(make_real_pong_frame())
     assert result.shape == (84, 84), f"Expected (84, 84), got {result.shape}"
     print("PASS  preprocess shape (real frame)")
 
 
-def test_preprocess_dtype():
+def test_preprocess_dtype() -> None:
     p = Preprocessor()
     result = p.preprocess(make_real_pong_frame())
-    assert result.dtype == np.float32, f"Expected float32, got {result.dtype}"
+    assert result.dtype == np.uint8, f"Expected uint8, got {result.dtype}"
     print("PASS  preprocess dtype (real frame)")
 
 
-def test_preprocess_value_range():
-    """Verify normalized float32 grayscale values in the expected range."""
+def test_preprocess_value_range() -> None:
+    # Verify raw uint8 grayscale values stay within the valid pixel range.
     p = Preprocessor()
     result = p.preprocess(make_real_pong_frame())
-    assert result.min() >= 0.0, f"Min pixel value {result.min()} < 0"
-    assert result.max() <= 1.0, f"Max pixel value {result.max()} > 1"
+    assert result.min() >= 0, f"Min pixel value {result.min()} < 0"
+    assert result.max() <= 255, f"Max pixel value {result.max()} > 255"
     print(f"PASS  preprocess value range (min={result.min()}, max={result.max()}) (real frame)")
 
 
-def test_reset_shape():
+def test_reset_shape() -> None:
     p = Preprocessor()
     stacked = p.reset(make_real_pong_frame())
-    assert stacked.shape == (4, 84, 84), f"Expected (4, 84, 84), got {stacked.shape}"
-    assert stacked.dtype == np.float32, f"Expected float32, got {stacked.dtype}"
+    assert stacked.shape == (84, 84, 4), f"Expected (84, 84, 4), got {stacked.shape}"
+    assert stacked.dtype == np.uint8, f"Expected uint8, got {stacked.dtype}"
     print("PASS  reset output shape (real frame)")
 
 
-def test_reset_fills_stack():
+def test_reset_fills_stack() -> None:
     p = Preprocessor()
     stacked = p.reset(make_real_pong_frame())
     for i in range(4):
-        assert np.array_equal(stacked[0], stacked[i]), "All frames should be equal after reset"
+        assert np.array_equal(stacked[..., 0], stacked[..., i]), "All frames should be equal after reset"
     print("PASS  reset fills stack with repeated frame (real frame)")
 
 
-def test_step_shape():
+def test_step_shape() -> None:
     p = Preprocessor()
     p.reset(make_real_pong_frame())
-    stacked = p.step(make_real_pong_frame(seed=43))  # different seed -> different starting obs
-    assert stacked.shape == (4, 84, 84), f"Expected (4, 84, 84), got {stacked.shape}"
-    assert stacked.dtype == np.float32, f"Expected float32, got {stacked.dtype}"
+    # Different seed so the second frame differs from the first.
+    stacked = p.step(make_real_pong_frame(seed=43))
+    assert stacked.shape == (84, 84, 4), f"Expected (84, 84, 4), got {stacked.shape}"
+    assert stacked.dtype == np.uint8, f"Expected uint8, got {stacked.dtype}"
     print("PASS  step output shape (real frame)")
 
 
-def test_step_updates_stack():
-    """Use fake frames here to *guarantee* the new frame differs from the previous one.
-    Real consecutive frames from the same env are also fine in practice, but fake ensures test robustness.
-    """
+def test_step_updates_stack() -> None:
+    # Use fake frames here to guarantee the new frame differs from the previous
+    # one. Real consecutive frames from the same env are also fine in practice,
+    # but fake ensures test robustness.
     p = Preprocessor()
     p.reset(make_fake_frame())
     stacked = p.step(make_fake_frame())
-    assert not np.array_equal(stacked[0], stacked[3]), "Frames should differ after step"
+    assert not np.array_equal(stacked[..., 0], stacked[..., 3]), "Frames should differ after step"
     print("PASS  step updates stack")
 
 

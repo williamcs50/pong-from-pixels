@@ -2,9 +2,9 @@
 
 ## System diagram
 
-Collection: Preprocessor → Action Selector → Env → Preprocessor → Replay Buffer
+Collection: Preprocessor → Transform → Action Selector → Env → Preprocessor → Replay Buffer
 
-Training: Replay Buffer → Q-Network + Target Network → Loss → Weight Update
+Training: Replay Buffer → Transform → Q-Network + Target Network → Loss → Weight Update
 
 ## Components
 
@@ -22,7 +22,7 @@ Why: Gymnasium/ALE is pure plumbing. It does not touch how the agent learns.
 
 In: raw frame (210x160x3 uint8 RGB)
 
-Out: stacked observation (4x84x84 float32, normalized [0,1])
+Out: stacked observation (84x84x4 uint8, raw pixel values)
 
 Build or import: build
 
@@ -38,9 +38,19 @@ Build or import: build
 
 Why: The sampling strategy directly shapes what the agent learns and how stable that learning is.
 
+### Transform
+
+In: stacked observation (84x84x4 uint8, single frame or batch)
+
+Out: normalized observation (Nx4x84x84 float32, [0,1])
+
+Build or import: build
+
+Why: The buffer stores raw uint8 for memory reasons and the network needs normalized float32 in channel-first order. One shared function does that conversion in exactly one place, used identically by the training path and the action selection path, instead of the conversion existing twice and disagreeing with itself.
+
 ### Q-Network
 
-In: stacked observation (4x84x84)
+In: normalized observation (Nx4x84x84 float32)
 
 Out: Q-value estimate for each action
 
@@ -50,7 +60,7 @@ Why: The number of layers, kernel sizes, and strides in the conv stack determine
 
 ### Target network
 
-In: stacked observation (4x84x84)
+In: normalized observation (Nx4x84x84 float32)
 
 Out: Q-value estimate for each action (frozen weights)
 
@@ -94,6 +104,7 @@ src/preprocess.py            Preprocessing
 src/q_network.py             Q-Network and target-network logic
 src/random_agent.py          Baseline random agent
 src/replay_buffer.py         Replay buffer
+src/transform.py             Shared transform (uint8 HWC to normalized float32 NCHW)
 scripts/check_environment.py Environment verification
 scripts/visual_check.py      Optional visual inspection helper
 ```
