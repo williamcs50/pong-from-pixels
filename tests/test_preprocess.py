@@ -84,6 +84,38 @@ def test_step_updates_stack() -> None:
     print("PASS  step updates stack")
 
 
+def test_newest_frame_at_last_index() -> None:
+    # The eyeball check can't prove ordering, this can: recompute the newest
+    # frame independently with preprocess() and compare it against the exact
+    # slot step() is supposed to have placed it in.
+    p = Preprocessor()
+    p.reset(make_fake_frame())
+    newest_obs = make_fake_frame()
+    stacked = p.step(newest_obs)
+    expected = p.preprocess(newest_obs)
+    assert np.array_equal(stacked[..., 3], expected), "Newest frame should be at index 3"
+    assert not np.array_equal(stacked[..., 0], expected), "Index 0 should still hold the oldest frame, not the newest"
+    print("PASS  newest frame lands at index 3, not index 0")
+
+
+def test_reset_clears_stale_stack() -> None:
+    # Simulates an episode boundary: a dirty stack built from step() calls,
+    # then reset() with a new episode's first frame. All 4 slots should be
+    # that new frame, not a mix of the old episode and the new one, which is
+    # what calling step() across the boundary would produce instead.
+    p = Preprocessor()
+    p.reset(make_fake_frame())
+    for _ in range(3):
+        p.step(make_fake_frame())
+
+    new_episode_obs = make_fake_frame()
+    stacked = p.reset(new_episode_obs)
+    expected = p.preprocess(new_episode_obs)
+    for i in range(4):
+        assert np.array_equal(stacked[..., i], expected), f"Index {i} should be the new episode's frame, stack was not cleared"
+    print("PASS  reset clears a stale stack across an episode boundary")
+
+
 if __name__ == "__main__":
     test_preprocess_shape()
     test_preprocess_dtype()
@@ -92,4 +124,6 @@ if __name__ == "__main__":
     test_reset_fills_stack()
     test_step_shape()
     test_step_updates_stack()
+    test_newest_frame_at_last_index()
+    test_reset_clears_stale_stack()
     print("\nAll tests passed!")

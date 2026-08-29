@@ -35,7 +35,7 @@ def test_transform_known_values() -> None:
     assert result.shape == (1, 4, 2, 2), f"Expected (1, 4, 2, 2), got {tuple(result.shape)}"
     assert result.dtype == torch.float32, f"Expected float32, got {result.dtype}"
 
-    # Hand-computed expected NCHW values: expected[0, c, h, w] == frame[h, w, c] / 255.0
+    # Expected NCHW values computed by hand: expected[0, c, h, w] == frame[h, w, c] / 255.0
     expected = np.array(
         [
             [[0, 4], [8, 12]],
@@ -55,7 +55,7 @@ def test_transform_known_values() -> None:
 def test_transform_round_trip_through_buffer() -> None:
     # A stacked frame from the preprocessor, transformed directly, should match
     # the same frame after being pushed into and sampled back out of the
-    # replay buffer. This exercises the actual write-then-read path.
+    # replay buffer. This exercises the actual write then read path.
     p = Preprocessor()
     stacked = p.reset(make_fake_frame())
 

@@ -30,9 +30,9 @@ def test_output_shape_and_device() -> None:
 
     sample = out[0]
     print("sample output:", sample)
-    assert torch.isfinite(sample).all(), "Sample output contains non-finite values"
+    assert torch.isfinite(sample).all(), "Sample output contains an infinite or NaN value"
     assert torch.any(sample < 0), "Expected some negative Q-values at initialization"
-    assert torch.abs(sample.mean()).item() < 1.0, f"Expected roughly zero-centered output, got mean {sample.mean().item():.4f}"
+    assert torch.abs(sample.mean()).item() < 1.0, f"Expected output centered near zero, got mean {sample.mean().item():.4f}"
 
     print("PASS  output shape and device")
 

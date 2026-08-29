@@ -176,21 +176,21 @@
 
 **Floor:** `src/preprocess.py` updated: preprocessing stops after resize, returns uint8, frame stack shifts from axis 0 to the last axis, output shape (84, 84, 4) matching the buffer's storage exactly. `push` needs zero conversion logic. `test_preprocess_dtype`, `test_preprocess_value_range`, and the frame stack shape tests updated to match: uint8, 0 to 255, (84, 84, 4). `architecture.md` corrected in the same sitting to say uint8 HWC, not float32 CHW. The shared transform function built: uint8 HWC in, cast to float32, divide by 255, transpose to NCHW, once, right before the network. A test pushes a known frame through preprocess and the transform and asserts the actual returned values, not just shape and dtype, confirming the numbers coming out are the numbers that should come out. Committed.
 
-**Aspiration:** The full pipeline runs end to end as a smoke test: `env.reset()` through the preprocessor, into the buffer, a sampled batch through the transform and the network, out to an action through `select_action`, back through `env.step()`. No shape, dtype, or device errors anywhere in that chain.
+**Aspiration:** The full pipeline runs end to end as a smoke test, two separate paths, both with no shape, dtype, or device errors. Acting: `env.reset()` through the preprocessor, the transform, the network, `select_action`, and `env.step()`, on the live batch of one state. Learning: a batch sampled from the buffer, through the transform and the network, no action, no `env.step()`.
 
 ---
 
 ## What landed today
 
 - No code was committed today. The session went entirely to verification and design, and it earned its keep anyway.
-- The buffer's storage dtype got decided on evidence, not habit. Two state sized arrays at capacity 100,000 cost 5.6448 GB under uint8 versus 22.5792 GB under float32, checked against 31.86 GB of system RAM. Float32 technically fits, but it buys nothing, since the emulator only ever produces uint8 pixels in the first place.
+- The buffer's storage dtype was decided on evidence, not habit. Two state sized arrays at capacity 100,000 cost 5.6448 GB under uint8 versus 22.5792 GB under float32, checked against 31.86 GB of system RAM. Float32 technically fits, but it buys nothing, since the emulator only ever produces uint8 pixels in the first place.
 - Traced the transform's round trip and found it wasn't actually invertible. `astype(np.uint8)` truncates instead of rounding, so a value that isn't an exact multiple of 1 over 255 comes back slightly wrong after the round trip, silently, with no error thrown.
 - Rounding before the cast would have shrunk that error, not removed it. The real fix was noticing that two conversions in the pipeline exist only to undo each other, the preprocessor dividing by 255 and the transform multiplying it back. Deleting both instead of patching the cast removes the bug entirely rather than making it smaller.
 - The resulting design is written down precisely enough to build from directly: the preprocessor stops after resize and returns uint8 with no normalization, the buffer takes it raw with no conversion in `push`, and one shared transform sits on the read side, used identically by the training path and the action selection path.
 
 ## What's open (carrying forward)
 
-- Floor was not met. Nothing got written today, only verified and designed.
+- Floor was not met. Nothing was written today, only verified and designed.
 - The preprocessor change itself: stop normalizing, return uint8, and stack the frames on the last axis instead of the first.
 - The three preprocessor tests, updated to match the new dtype and shape.
 - `architecture.md`, corrected again to reflect the new design.
@@ -211,7 +211,7 @@
 
 **Floor:** `src/preprocess.py`: `preprocess()` stops normalizing, returns uint8; `_get_stacked()` stacks on the last axis; output `(84, 84, 4)` uint8. Six of seven `test_preprocess.py` tests updated for the new dtype/shape/axis (`test_preprocess_shape` is the one that doesn't move). The shared transform function: uint8 HWC in, cast to float32, divide by 255, transpose to NCHW. The isolated value test on the transform (known input, exact expected output). The round trip test: frame through `preprocess`, through `buffer.push`/`buffer.sample`, through the transform, checked against transforming the original frame directly. `architecture.md` corrected again to say uint8 HWC. All committed and pushed.
 
-**Aspiration:** The full end to end smoke test: `env.reset()` through the preprocessor, into the buffer, a sampled batch through the transform and the network, out to an action through `select_action`, back through `env.step()`. No shape, dtype, or device errors anywhere in that chain.
+**Aspiration:** The full end to end smoke test, two separate paths, both with no shape, dtype, or device errors. Acting: `env.reset()` through the preprocessor, the transform, the network, `select_action`, and `env.step()`, on the live batch of one state. Learning: a batch sampled from the buffer, through the transform and the network, no action, no `env.step()`.
 
 ---
 
@@ -230,5 +230,38 @@
 ## Anything surprising or worth flagging
 
 - I updated the preprocess tests right after the code change, before running pytest against the unedited version. So the updates were driven by knowing what the new shape and dtype should be, not by real failure messages.
+
+---
+
+# Saturday: Smoke Test
+
+**Date:** 2026-08-29
+
+**Floor:** Make sure `scripts/visual_check.py` works correctly, and build the end to end smoke test as two separate paths. The acting path: `env.reset()` through the preprocessor, transform, the network, `select_action`, and `env.step()`, using the live batch of one state, asserting shape `(1, n_actions)`, dtype `float32`, and device at the network output, plus a valid action index. The learning path: a batch sampled from the buffer, through the transform and the network, no action selection, no `env.step()`, asserting shape `(batch_size, n_actions)`, dtype `float32`, and device at the network output. No NaNs anywhere in either path.
+
+**Aspiration:** Start the full training loop.
+
+---
+
+## What landed today
+
+- `scripts/visual_check.py` corrected: no more `*255` overflow, `transform_output.png` now compares against the same frame as `preprocessed_frame.png` instead of a later, mutated one, episode boundaries pair `env.reset()` with `prep.reset()` instead of stepping across them, and the ball candidate printout is cropped to the field so it's not buried under the score strip and the bottom wall. It used to call `preprocess()` directly, so it structurally could not see last week's stacking axis change. Now it runs through the buffer, sample, and the shared transform, the same path training will actually use. Reran it just now, still clean.
+- `tests/test_preprocess.py` now has two real assertions instead of eyeball checks: `test_newest_frame_at_last_index` and `test_reset_clears_stale_stack`. Frame ordering was confirmed independently too, by differencing frames and tracking the ball's raw coordinates, scaled by 84 over 160 to match the preprocessed frame.
+- `tests/smoke_test.py` built: two paths, acting (`env.reset()` through the preprocessor, the transform, the network, `select_action`, `env.step()`) and learning (a batch sampled from the buffer through the transform and the network), both asserting shape, dtype, device, and no NaN on the network output. Ten steps and a batch of eight ran clean.
+
+## What's open (carrying forward)
+
+- The training loop itself: loss, `backward()`, the optimizer step, target network syncing on a schedule, and epsilon decay over time. Nothing built yet, that's today's aspiration. First thing to write next session is the weight update test: snapshot the Q and target weights, one optimizer step on Q with a synthetic batch, assert Q changed and target didn't.
+- Action is hardcoded to `0` in `visual_check.py`'s `buffer.push()` call. Needs to be the actual action taken once the training loop exists.
+- `smoke_test.py`'s learning path only checks `current_batch` from `buffer.sample()`. The other four fields, action, reward, next state, done, get discarded with `_` and never asserted.
+- `run_acting_loop` gets called once by each test function, so the smoke test builds a fresh env and network twice for one run instead of once.
+
+## Anything surprising or worth flagging
+
+- I want to remember the `*255` bug as a category, not just an incident. Multiplying already normalized uint8 data by 255 wraps around instead of erroring, and the result was still a recognizable, plausible looking Pong frame, just inverted like a photo negative. It survived my eyeball checks because it looked fine. That's the dangerous kind of bug, the one that doesn't crash.
+- I added a comment in `visual_check.py` explaining why pushing a cross episode `next_state` on a terminal transition is safe: the Bellman target masks the bootstrap term by `(1 - done)`, so that `next_state` never actually gets read. I wrote it so a future refactor doesn't decouple `done` from that assumption without knowing why it mattered.
+- The smoke test's wording in this file was wrong in three places, not just today's Floor but the Aspiration lines from two earlier sessions too. All of them described a sampled batch feeding directly into `select_action`, which would crash on `select_action`'s `.item()` call. It stayed uncaught until I had to write the actual code and be specific about which tensor goes where. I reworded all three into two separate paths instead of one chain: the acting path takes the live batch of one state through `select_action`, and the learning path takes the sampled batch through the transform and the network only, `select_action` never sees it.
+- I set `EPSILON = 0.0` in the smoke test on purpose, not as a leftover default. A nonzero epsilon would route the action through `select_action`'s random branch, which never reads `q_values`, so the forward pass and the network's actual output would never get exercised. A test set up that way would pass without testing anything.
+- I stopped at the aspiration boundary on purpose today instead of drifting past it. Floor was met, both items, and once that was confirmed I pushed the training step function to next session deliberately, not because time ran out.
 
 ---
