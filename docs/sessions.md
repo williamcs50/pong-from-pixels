@@ -270,7 +270,7 @@
 
 **Date:** 2026-09-12
 
-**Floor:** The two open pre flight items closed with actual output, not memory: four ball coordinates across the stack, and right paddle frames at both extremes. If either one fails, that is the day and the training step moves. The VRAM baseline written into this file, plus the one line on score digits as a known choice. The training step written and verified on a fixture where I know the answer by hand: loss finite, Q-network weights move, target network weights do not.
+**Floor:** The two open pre flight items closed with actual output, not memory: four ball coordinates across the stack, and right paddle frames at both extremes. If either one fails, that's the day and the training step moves. The VRAM baseline written into this file, plus the one line on score digits as a known choice. The training step written and verified on a fixture where I know the answer by hand: loss finite, Q-network weights move, target network weights don't.
 
 **Aspiration:** That training step integrated into an end to end loop that runs a few hundred steps without falling over.
 
