@@ -265,3 +265,36 @@
 - I stopped at the aspiration boundary on purpose today instead of drifting past it. Floor was met, both items, and once that was confirmed I pushed the training step function to next session deliberately, not because time ran out.
 
 ---
+
+# Saturday: Training Step
+
+**Date:** 2026-09-12
+
+**Floor:** The two open pre flight items closed with actual output, not memory: four ball coordinates across the stack, and right paddle frames at both extremes. If either one fails, that is the day and the training step moves. The VRAM baseline written into this file, plus the one line on score digits as a known choice. The training step written and verified on a fixture where I know the answer by hand: loss finite, Q-network weights move, target network weights do not.
+
+**Aspiration:** That training step integrated into an end to end loop that runs a few hundred steps without falling over.
+
+---
+
+## What landed today
+
+- `src/train.py` built: `train_step` takes the raw batch from `ReplayBuffer.sample()`, calls `transform` itself, and returns the loss as a float.
+- `tests/test_train.py` built: Q params move and target params don't, the loss matches a hand computed value on a fixture where both networks return fixed Q values, and a terminal batch ignores `next_state`. All three pass.
+- `scripts/visual_check.py` reworked: paddle height derived per run from the raw frame, the stack asserted on every step and after every reset, the ball tracked through all 4 slots, and an episode boundary forced at step 10 so that branch finally runs. Reran it, clean.
+- `scripts/check_environment.py` now reports the baselines: 6144 MiB VRAM total with 5081 free, 21.0 MiB for both networks, 31.86 GiB host RAM, 5.26 GiB for the buffer at capacity 100,000.
+- `docs/architecture.md`: no crop before the resize and the buffer storing every frame twice both recorded as known choices.
+
+## What's open (carrying forward)
+
+- The loop. Still the aspiration, didn't land. First thing is proving a fixed batch trained repeatedly drives the loss toward zero, since nothing shows `train_step` learns yet.
+- `env.action_space` is unseeded, so the last run had both paddles fully visible and neither extreme got checked. Seeding it plus a driven UP and DOWN rollout would put both in every run.
+- `FORCED_BOUNDARY_STEP` is scaffolding. Comes out once real episodes terminate inside the loop.
+- Action is still hardcoded to `0` in `buffer.push()`. Carried from last session, resolves when the loop supplies a real action.
+
+## Anything surprising or worth flagging
+
+- I widened a failing expectation instead of fixing the derivation. My expected 3 or 4 started flagging legitimate frames at 6 and 7, and I widened the band to 1 through 7 rather than ask why. A band that can't fail reads as green while it's stopped testing anything.
+- The motion check used to drop empty slots and difference what was left, so an occluded middle slot made slots 0 and 3 look one frame apart. Today's run had slot 3 empty and reported 2 of 3 pairs instead of hiding it.
+- The buffer stack and the same stack through `transform` came back with identical ball coordinates. That's the slot ordering proof, and until today it was me looking at a PNG.
+
+---
