@@ -17,7 +17,7 @@ LARGE_CAPACITY = 100
 
 
 def make_transition(i: int) -> tuple[np.ndarray, int, float, np.ndarray, bool]:
-    """Return a distinguishable transition where every value encodes index i."""
+    """Return a distinguishable transition where every value encodes i."""
     state = np.full(FRAME_SHAPE, i % UINT8_MAX, dtype=np.uint8)
     next_state = np.full(FRAME_SHAPE, (i + NEXT_STATE_OFFSET) % UINT8_MAX, dtype=np.uint8)
     action = i % N_ACTIONS
@@ -33,17 +33,17 @@ def test_push_and_sample_shapes_dtypes() -> None:
 
     states, actions, rewards, next_states, dones = buf.sample(BATCH_SIZE)
 
-    assert states.shape == (BATCH_SIZE, *FRAME_SHAPE),     f"states shape: {states.shape}"
+    assert states.shape == (BATCH_SIZE, *FRAME_SHAPE), f"states shape: {states.shape}"
     assert next_states.shape == (BATCH_SIZE, *FRAME_SHAPE), f"next_states shape: {next_states.shape}"
-    assert actions.shape == (BATCH_SIZE,),               f"actions shape: {actions.shape}"
-    assert rewards.shape == (BATCH_SIZE,),               f"rewards shape: {rewards.shape}"
-    assert dones.shape == (BATCH_SIZE,),                 f"dones shape: {dones.shape}"
+    assert actions.shape == (BATCH_SIZE,), f"actions shape: {actions.shape}"
+    assert rewards.shape == (BATCH_SIZE,), f"rewards shape: {rewards.shape}"
+    assert dones.shape == (BATCH_SIZE,), f"dones shape: {dones.shape}"
 
-    assert states.dtype == np.uint8,             f"states dtype: {states.dtype}"
-    assert next_states.dtype == np.uint8,        f"next_states dtype: {next_states.dtype}"
-    assert actions.dtype == np.int64,            f"actions dtype: {actions.dtype}"
-    assert rewards.dtype == np.float32,          f"rewards dtype: {rewards.dtype}"
-    assert dones.dtype == np.bool_,              f"dones dtype: {dones.dtype}"
+    assert states.dtype == np.uint8, f"states dtype: {states.dtype}"
+    assert next_states.dtype == np.uint8, f"next_states dtype: {next_states.dtype}"
+    assert actions.dtype == np.int64, f"actions dtype: {actions.dtype}"
+    assert rewards.dtype == np.float32, f"rewards dtype: {rewards.dtype}"
+    assert dones.dtype == np.bool_, f"dones dtype: {dones.dtype}"
 
     print("PASS  push and sample shapes and dtypes")
 
@@ -55,11 +55,11 @@ def test_circular_overwrite() -> None:
         buf.push(*make_transition(i))
 
     assert len(buf) == SMALL_CAPACITY, f"Expected size {SMALL_CAPACITY}, got {len(buf)}"
-    assert buf.position == overflow,   f"Expected position {overflow}, got {buf.position}"
+    assert buf.position == overflow, f"Expected position {overflow}, got {buf.position}"
 
-    # The overflow transitions should have wrapped to positions 0 and 1
-    assert buf.current_state[0][0][0][0] == SMALL_CAPACITY % UINT8_MAX,          "Position 0 should hold transition 5"
-    assert buf.current_state[1][0][0][0] == (SMALL_CAPACITY + 1) % UINT8_MAX,    "Position 1 should hold transition 6"
+    # The overflow transitions should have wrapped to positions 0 and 1.
+    assert buf.current_state[0][0][0][0] == SMALL_CAPACITY % UINT8_MAX, "Position 0 should hold transition 5"
+    assert buf.current_state[1][0][0][0] == (SMALL_CAPACITY + 1) % UINT8_MAX, "Position 1 should hold transition 6"
 
     print("PASS  circular overwrite")
 

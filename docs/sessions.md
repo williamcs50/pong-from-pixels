@@ -298,3 +298,36 @@
 - The buffer stack and the same stack through `transform` came back with identical ball coordinates. That's the slot ordering proof, and until today it was me looking at a PNG.
 
 ---
+
+# Saturday: Reorient and Train
+
+**Date:** 2026-10-03
+
+**Floor:** Reorient with the codebase and complete the masking test.
+
+**Aspiration:** Begin training the agent. 
+
+---
+
+## What landed today
+
+- Reoriented: walked the pipeline file by file to refamiliarize myself with the codebase.
+- Added `test_terminal_target_equals_reward` to `tests/test_train.py`. It uses constant networks so the current Q value is `[-1.0, 5.0]` and the best next state Q value is `10.0`. Every transition is marked done, so the target is the reward alone and the hand computed loss is 4.0.
+- Verified the new test by breaking the `targets` line two ways. One multiplied the reward by the future value and gave 17.5. The other zeroed the whole target on terminal transitions, reward included, and gave 2.5. I computed both losses by hand before running, and both failures matched.
+- Did a comment and docstring consistency pass across all test files.
+- 27 of 27 pass.
+
+## What's open (carrying forward)
+
+- The overfit test: prove that `train_step` actually learns by repeatedly training on a fixed batch and checking that the loss moves toward zero.
+- The five loop decisions, including how to handle `terminated or truncated`.
+- The tiny training loop.
+- Launching the first real run on the PC next Saturday, with checkpointing. Needs a launch checklist.
+- Whether the Air's RAM is enough for the 5.26 GiB replay buffer.
+- The three carried items from Sept 12: action still hardcoded to `0`; `FORCED_BOUNDARY_STEP` still scaffolding; the action space still unseeded.
+
+## Anything surprising or worth flagging
+
+- `test_terminal_batch_ignores_next_state` wasn't enough on its own. It only checked that changing the next state didn't change the loss when `done` was true. I broke the target so it zeroed both the future value and the reward on terminal transitions, and that test still passed. In Pong that bug erases every point scored or lost. The new test checks that the reward is still the target for a terminal transition, and it caught the same bug.
+
+---

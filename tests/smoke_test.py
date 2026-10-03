@@ -17,17 +17,20 @@ gymnasium.register_envs(ale_py)
 
 N_STEPS = 10
 BATCH_SIZE = 8
-# epsilon=0.0 forces every action through select_action's argmax branch, the
-# one that actually reads q_values (dim=1, .item()). The random branch never
-# touches q_values, so it would not exercise the forward pass integration
-# this test exists to check.
+# EPSILON = 0.0 forces every action through select_action's argmax branch,
+# the one that actually reads q_values (dim=1, .item()). The random branch
+# never touches q_values, so it would not exercise the forward pass
+# integration this test exists to check.
 EPSILON = 0.0
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
-    """Run the acting path for N_STEPS and return the filled buffer, network, and action count."""
+    """Run the acting path for N_STEPS.
+
+    Returns the filled buffer, the network, and the action count.
+    """
     env = gymnasium.make("ALE/Pong-v5", render_mode="rgb_array")
     n_actions = env.action_space.n
 
@@ -66,16 +69,17 @@ def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
 
 
 def test_acting_path() -> None:
-    # Live batch of one state at every step: transform -> network ->
-    # select_action -> env.step. Assertions for each step live in
-    # run_acting_loop, this just confirms the full loop completes.
+    # Runs the live batch of one state through the transform, the network,
+    # select_action, and env.step at every step. The per-step assertions live
+    # in run_acting_loop, so this only confirms the full loop completes.
     _, _, n_actions = run_acting_loop()
     print(f"PASS  acting path: {N_STEPS} steps, valid actions, q_values (1, {n_actions}), no NaN, on {DEVICE.type}")
 
 
 def test_learning_path() -> None:
-    # Sampled batch, transform, network. No loss, no backward pass, that's
-    # the training loop, not this test. Just prove a batch survives the chain.
+    # Runs a sampled batch through the transform and the network. Loss and the
+    # backward pass belong to the training loop, not this test, so this only
+    # proves a batch survives the chain.
     buffer, net, n_actions = run_acting_loop()
 
     current_batch, _, _, _, _ = buffer.sample(BATCH_SIZE)
