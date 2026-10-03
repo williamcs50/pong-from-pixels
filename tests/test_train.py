@@ -18,6 +18,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def make_batch(seed: int = 0) -> tuple:
+    """Return a random batch in the format ReplayBuffer.sample() returns."""
     rng = np.random.default_rng(seed)
     batch = (
         rng.integers(0, 256, size=(BATCH_SIZE, 84, 84, 4), dtype=np.uint8),
@@ -39,6 +40,10 @@ def make_batch(seed: int = 0) -> tuple:
 
 
 def make_networks() -> tuple[QNetwork, QNetwork, optim.Optimizer]:
+    """Return a seeded Q-network, a target synced to it, and an optimizer.
+
+    The optimizer holds only the Q-network's parameters.
+    """
     torch.manual_seed(0)
     q_network = QNetwork(n_actions=N_ACTIONS).to(DEVICE)
     target_network = QNetwork(n_actions=N_ACTIONS).to(DEVICE)
@@ -47,8 +52,11 @@ def make_networks() -> tuple[QNetwork, QNetwork, optim.Optimizer]:
 
 
 def make_constant_network(action_values: list[float]) -> QNetwork:
-    # Zeroing every parameter makes activations zero through the whole stack, so
-    # the output is fc2.bias for any input and the forward pass is hand computable.
+    """Return a network that outputs action_values for any input.
+
+    Zeroing every parameter makes activations zero through the whole stack, so
+    the output is fc2.bias for any input and the forward pass is hand computable.
+    """
     network = QNetwork(n_actions=N_ACTIONS).to(DEVICE)
     with torch.no_grad():
         for param in network.parameters():
@@ -108,7 +116,7 @@ def test_train_step_known_values() -> None:
 
 
 def test_terminal_batch_ignores_next_state() -> None:
-    # Two different next_states must give the same loss when every done is True.
+    # Different next_states must give the same loss when every done is True.
     rewards = np.array([1.0, 0.0, -1.0, 0.5], dtype=np.float32)
     states = np.random.default_rng(1).integers(0, 256, size=(BATCH_SIZE, 84, 84, 4), dtype=np.uint8)
     actions = np.zeros(BATCH_SIZE, dtype=np.int64)
@@ -130,8 +138,35 @@ def test_terminal_batch_ignores_next_state() -> None:
     print(f"PASS  terminal batch ignores next_state (loss={losses[0]:.4f} for both)")
 
 
+def test_terminal_target_equals_reward() -> None:
+    #   Q(s) = [-1.0, 5.0, ...]       target Q(s') = [10.0, 0.0, ...], max 10.0
+    #   actions [0, 1]   rewards [1.0, -2.0]   dones [1, 1]   gamma 0.5
+    #   predicted = [-1.0, 5.0]
+    #   targets   = [1.0 + 0.5*0*10.0, -2.0 + 0.5*0*10.0] = [1.0, -2.0]
+    #   errors    = [2.0, 7.0], both past the Huber corner at 1, so |e| - 0.5
+    #   losses    = [1.5, 6.5]  ->  mean 4.0
+    q_network = make_constant_network([-1.0, 5.0, 0.0, 0.0, 0.0, 0.0])
+    target_network = make_constant_network([10.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    optimizer = optim.SGD(q_network.parameters(), lr=0.0)
+
+    states = np.zeros((2, 84, 84, 4), dtype=np.uint8)
+    batch = (
+        states,
+        np.array([0, 1], dtype=np.int64),
+        np.array([1.0, -2.0], dtype=np.float32),
+        states,
+        np.array([True, True], dtype=np.bool_),
+    )
+
+    loss = train_step(q_network, target_network, optimizer, batch, gamma=0.5)
+
+    assert math.isclose(loss, 4.0, rel_tol=1e-6), f"Expected terminal loss 4.0, got {loss}"
+    print(f"PASS  terminal target equals reward (expected 4.0, got {loss:.6f})")
+
+
 if __name__ == "__main__":
     test_train_step_updates_q_not_target()
     test_train_step_known_values()
     test_terminal_batch_ignores_next_state()
+    test_terminal_target_equals_reward()
     print("\nAll tests passed!")
