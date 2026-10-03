@@ -13,7 +13,7 @@ q_values = torch.tensor([[0.1, -0.2, 0.3, 2.0, 0.5, -0.1]])
 
 
 def test_greedy_always_selects_argmax() -> None:
-    # Epsilon = 0 should always choose the argmax
+    # Epsilon = 0 should always choose the argmax.
     actions = [
         select_action(q_values=q_values, epsilon=0.0, n_actions=N_ACTIONS)
         for _ in range(100)
@@ -33,17 +33,19 @@ def test_explore_selects_all_actions_uniformly() -> None:
 
     counts = Counter(actions)
 
-    assert set(counts.keys()) == set(range(N_ACTIONS))
-    assert all(0 <= action < N_ACTIONS for action in actions)
+    assert set(counts.keys()) == set(range(N_ACTIONS)), f"Expected every action, got {sorted(counts.keys())}"
+    assert all(0 <= action < N_ACTIONS for action in actions), "Action out of range"
     assert all(isinstance(action, int) for action in actions), "Expected python int"
 
     expected = 6000 / N_ACTIONS
-    assert all(abs(count - expected) < expected * 0.25 for count in counts.values())
+    assert all(abs(count - expected) < expected * 0.25 for count in counts.values()), (
+        f"Expected about {expected:.0f} per action, got {dict(sorted(counts.items()))}"
+    )
     print("PASS  explore branch selects all actions roughly uniformly")
 
 
 def test_greedy_handles_requires_grad_tensor() -> None:
-    # Selector should work with tensors that require gradients
+    # Selector should work with tensors that require gradients.
     q_values_with_grad = q_values.clone().requires_grad_(True)
     action = select_action(q_values=q_values_with_grad, epsilon=0.0, n_actions=N_ACTIONS)
 

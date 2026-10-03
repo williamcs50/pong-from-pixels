@@ -6,22 +6,22 @@ import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.transform import transform
 from src.preprocess import Preprocessor
 from src.replay_buffer import ReplayBuffer
+from src.transform import transform
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def make_fake_frame() -> np.ndarray:
-    """Deterministic frame so a failing assertion is reproducible, not randomly generated."""
+    """Return a deterministic frame, so a failing assertion is reproducible."""
     return np.arange(210 * 160 * 3, dtype=np.uint8).reshape(210, 160, 3)
 
 
 def test_transform_known_values() -> None:
-    # Single HWC frame, H=2, W=2, C=4, each pixel a distinct value so the
-    # transpose is provably moving each value to the right place, not just
-    # producing the right shape.
+    # A single HWC frame with H=2, W=2, C=4. Each pixel has a distinct value,
+    # so the test proves the transpose moves each value to the right place,
+    # not just that the shape is right.
     frame = np.array(
         [
             [[0, 1, 2, 3], [4, 5, 6, 7]],
@@ -35,7 +35,8 @@ def test_transform_known_values() -> None:
     assert result.shape == (1, 4, 2, 2), f"Expected (1, 4, 2, 2), got {tuple(result.shape)}"
     assert result.dtype == torch.float32, f"Expected float32, got {result.dtype}"
 
-    # Expected NCHW values computed by hand: expected[0, c, h, w] == frame[h, w, c] / 255.0
+    # Expected NCHW values computed by hand:
+    # expected[0, c, h, w] == frame[h, w, c] / 255.0.
     expected = np.array(
         [
             [[0, 4], [8, 12]],

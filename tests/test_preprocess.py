@@ -1,8 +1,8 @@
 import os
 import sys
 
-import gymnasium as gym
 import ale_py
+import gymnasium as gym
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -11,12 +11,12 @@ from src.preprocess import Preprocessor
 
 
 def make_fake_frame() -> np.ndarray:
-    """Random noise for controlled unit tests (e.g. stack equality/difference)."""
+    """Return random noise for unit tests that compare frames in the stack."""
     return np.random.randint(0, 256, (210, 160, 3), dtype=np.uint8)
 
 
 def make_real_pong_frame(seed: int = 42) -> np.ndarray:
-    """Return a real observation from ALE/Pong-v5. Used to satisfy floor goal of testing with real Pong frame."""
+    """Return a real ALE/Pong-v5 frame, so tests run on actual game pixels."""
     env = gym.make("ALE/Pong-v5")
     obs, _ = env.reset(seed=seed)
     env.close()
@@ -24,7 +24,7 @@ def make_real_pong_frame(seed: int = 42) -> np.ndarray:
 
 
 def test_preprocess_shape() -> None:
-    # Use a real Pong frame per floor goal.
+    # Use a real Pong frame so the resize is checked on actual game pixels.
     p = Preprocessor()
     result = p.preprocess(make_real_pong_frame())
     assert result.shape == (84, 84), f"Expected (84, 84), got {result.shape}"
