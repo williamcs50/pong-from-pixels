@@ -336,3 +336,41 @@
 - `test_terminal_batch_ignores_next_state` wasn't enough on its own. It only checked that changing the next state didn't change the loss when `done` was true. I broke the target so it zeroed both the future value and the reward on terminal transitions, and that test still passed. In Pong that bug erases every point scored or lost. The new test checks that the reward is still the target for a terminal transition, and it caught the same bug.
 
 ---
+
+# Monday: Overfit Test
+
+**Date:** 2026-10-05
+
+**Floor:** Finish the fixed batch overfit test and get it passing, proving that `train_step` can actually learn from a fixed batch.
+
+**Aspiration:** Finish the overfit test, resolve the five remaining training loop decisions and have them in writing, and have the training loop ready to implement tomorrow.
+
+---
+
+## What landed today
+
+- Added `test_train_step_overfits_fixed_batch` to `tests/test_train.py`. It calls `train_step` 200 times on one seeded batch of four transitions and asserts the final loss falls below 1% of the initial loss. It passes.
+- Answered the five training decisions for the real run:
+  - **When to train:** every 4 env steps.
+  - **When to start:** after 50,000 transitions are in the buffer.
+  - **Episode boundary:** reset the env and the frame stack, and keep the buffer, the networks, and the optimizer.
+  - **Terminated vs. truncated:** only `terminated` stops bootstrapping. A truncated game was cut off by a time limit and could have kept going, so its next state still has value.
+  - **Target sync:** every 10,000 gradient updates.
+- Built `train()` in `src/train.py` and `scripts/tiny_train.py`, which calls the same function with tiny settings. One loop, two configs, so the tiny run actually says something about the real one. Actions go through `select_action` instead of inline epsilon greedy logic, so that behavior lives in one tested place.
+- Ran the tiny loop on the MacBook Air. It ran to completion, started training after warmup, synced the target on schedule, reset cleanly after an episode ended, and kept the loss finite throughout.
+
+## What's open (carrying forward)
+
+- The real run config. `scripts/tiny_train.py` covers the tiny run, but the full settings still need their own script. The epsilon schedule and the total step count for the real run aren't decided yet.
+- Logging and checkpointing. Episode rewards, losses, and epsilon need to go to a file so the real curve survives the run. Model weights need saving on a schedule so a crash doesn't lose everything and the clips have checkpoints to come from.
+- A launch checklist for the first real run on the PC, including confirming the loop prints `Training device: GPU` before leaving it to train.
+- The overfit test hasn't been checked against a deliberate break yet. Removing `optimizer.step()` should make it fail.
+- Still in `scripts/visual_check.py` from Sept 12: action hardcoded to `0`, `FORCED_BOUNDARY_STEP`, and the unseeded action space. The training loop handles the first two properly now, so the script can follow.
+
+## Anything surprising or worth flagging
+
+- The overfit test's 1% bar is looser than it needs to be. The loss went essentially to zero, so a partly broken update could still pass.
+- My first loop draft had `stacked - next_stacked` instead of `stacked = next_stacked`. It wouldn't have crashed. It would have quietly stored each episode's first frame as every state in that episode, the same category as the `*255` bug.
+- The first tiny run printed nothing, and not crashing doesn't prove much. I added prints for episode ends, the loss, and target syncs, plus a check that stops the run if the loss isn't finite.
+
+---
