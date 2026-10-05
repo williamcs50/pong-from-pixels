@@ -163,10 +163,34 @@ def test_terminal_target_equals_reward() -> None:
     assert math.isclose(loss, 4.0, rel_tol=1e-6), f"Expected terminal loss 4.0, got {loss}"
     print(f"PASS  terminal target equals reward (expected 4.0, got {loss:.6f})")
 
+def test_train_step_overfits_fixed_batch() -> None:
+    batch = make_batch(seed=0)
+    q_network, target_network, optimizer = make_networks()
+
+    initial_loss = train_step(q_network, target_network, optimizer, batch, gamma=0.99)
+
+    # 200 calls total, counting the first and the last
+    for _ in range(198):
+        train_step(q_network, target_network, optimizer, batch, gamma=0.99)
+
+    final_loss = train_step(q_network, target_network, optimizer, batch, gamma=0.99)
+
+    # Throw error if loss is greater than 1%
+    assert final_loss < initial_loss * 0.01,(
+        f"Training failed to overfit the fixed batch: " 
+        f"initial loss={initial_loss:.6f}, final loss={final_loss:.6f}"
+    )
+
+    # Write a passing message if it works properly
+    print(f"PASS  train step overfits fixed batch (initial={initial_loss:.4f}, final={final_loss:.6f}, ratio={final_loss / initial_loss:.2%})")
+
+    
+
 
 if __name__ == "__main__":
     test_train_step_updates_q_not_target()
     test_train_step_known_values()
     test_terminal_batch_ignores_next_state()
     test_terminal_target_equals_reward()
+    test_train_step_overfits_fixed_batch()
     print("\nAll tests passed!")
