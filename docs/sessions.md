@@ -305,7 +305,7 @@
 
 **Floor:** Reorient with the codebase and complete the masking test.
 
-**Aspiration:** Begin training the agent. 
+**Aspiration:** Begin training the agent.
 
 ---
 
@@ -320,11 +320,16 @@
 ## What's open (carrying forward)
 
 - The overfit test: prove that `train_step` actually learns by repeatedly training on a fixed batch and checking that the loss moves toward zero.
-- The five loop decisions, including how to handle `terminated or truncated`.
-- The tiny training loop.
+- Five training decisions need answers before the loop gets built. Each one is its own item below.
+- When to call `train_step`. Every env step, or once every few? That sets how many gradient updates the agent gets for each frame it plays.
+- When to start training. The buffer starts empty, so the first updates would sample from a handful of transitions. How much data should get collected before the first update?
+- What happens at an episode boundary. The env resets, but so does the frame stack, along with anything else that only makes sense inside one episode.
+- `terminated` vs. `truncated`. `terminated` means the game actually ended, so the target is just the reward. `truncated` means a time limit cut the game off when it could have kept going. Right now both get pushed as `done`, which stops bootstrapping for both.
+- How often to sync the target network. Copy the Q network into it too often and the targets move with every update. Too rarely and they go stale.
+- The tiny training loop. Same structure as the real loop, just small enough to run in a minute or two on the MacBook Air. Proves the pipeline holds together, not that the agent learns.
 - Launching the first real run on the PC next Saturday, with checkpointing. Needs a launch checklist.
-- Whether the Air's RAM is enough for the 5.26 GiB replay buffer.
-- The three carried items from Sept 12: action still hardcoded to `0`; `FORCED_BOUNDARY_STEP` still scaffolding; the action space still unseeded.
+- Whether the MacBook Air's RAM is enough for the 5.26 GiB replay buffer.
+- The three carried items from Sept 12: action is still hardcoded to `0`, `FORCED_BOUNDARY_STEP` is still scaffolding, and the action space is still unseeded.
 
 ## Anything surprising or worth flagging
 
