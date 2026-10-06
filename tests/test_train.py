@@ -175,14 +175,17 @@ def test_train_step_overfits_fixed_batch() -> None:
 
     final_loss = train_step(q_network, target_network, optimizer, batch, gamma=0.99)
 
-    # Throw error if loss is greater than 1%
-    assert final_loss < initial_loss * 0.01,(
-        f"Training failed to overfit the fixed batch: " 
-        f"initial loss={initial_loss:.6f}, final loss={final_loss:.6f}"
+    # Throw error if the final loss is above 1% of the initial loss.
+    # Scientific notation throughout: the final loss has landed anywhere from
+    # 1e-4 to 1e-8 across runs, and any fixed decimal count prints one end as zeros.
+    assert final_loss < initial_loss * 0.01, (
+        f"Training failed to overfit the fixed batch: "
+        f"initial loss={initial_loss:.3e}, final loss={final_loss:.3e}"
     )
 
     # Write a passing message if it works properly
-    print(f"PASS  train step overfits fixed batch (initial={initial_loss:.4f}, final={final_loss:.6f}, ratio={final_loss / initial_loss:.2%})")
+    print(f"PASS  train step overfits fixed batch "
+          f"(initial={initial_loss:.4f}, final={final_loss:.3e}, ratio={final_loss / initial_loss:.3e})")
 
     
 
