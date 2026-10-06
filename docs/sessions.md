@@ -374,3 +374,68 @@
 - The first tiny run printed nothing, and not crashing doesn't prove much. I added prints for episode ends, the loss, and target syncs, plus a check that stops the run if the loss isn't finite.
 
 ---
+
+# Tuesday: Launch Prep
+
+**Date:** 2026-10-06
+
+**Floor:**
+
+1. **Prove the overfit test can catch a broken training step:** deliberately remove `optimizer.step()`, run the test, and confirm that it fails for the expected reason. Restore the update afterward and confirm the test passes again.
+2. **Finalize the exploration schedule and training length for the real run:** decide the starting epsilon, minimum epsilon, decay schedule, and total number of environment steps the agent will train for.
+3. **Finalize the action space for the real run:** decide whether the agent will use 3 actions or all 6 available actions, and confirm that the environment, network output size, and action selection code all match the decision before launch.
+4. **Create the complete real run configuration and launch checklist:** put the chosen hyperparameters and run settings in a dedicated config/script, and document the checks needed before starting the PC run, including device, environment, model, replay buffer, output paths, and temperature during warmup.
+
+**Aspiration:** 
+
+1. **Add the minimum logging and checkpointing needed for the first real run:** write episode reward, episode number, and relevant training information to disk, and save model checkpoints on a defined schedule so the run produces recoverable data and usable milestone models from the beginning.
+2. **Bring `scripts/visual_check.py` in line with the real training code:** remove the hardcoded action `0`, remove `FORCED_BOUNDARY_STEP`, and seed the action space so the visual check uses the same action selection and episode boundary behavior as the training loop. Run the script afterward and confirm it still produces the expected gameplay behavior.
+3. **Launch Run 1 on the PC:** verify the training loop reports `Training device: GPU`, fills the replay buffer, reaches the training phase, and begins updating the network without errors. If this point is reached with logging and checkpointing fully operational, let the run continue as the actual first real training run.
+
+---
+
+## What landed today
+
+- Proved the overfit test can fail. Baseline passed at a ratio of 8.446e-05. With `optimizer.step()` commented out the loss never moved, 2.880e-01 to 2.880e-01, ratio 1.0. With `optimizer.zero_grad()` commented out the loss rose instead, ratio 3.2. The test passed again after each restore, at 1.744e-07 and 5.432e-04, and `git diff src/train.py` comes back empty.
+- Keeping the 1% bar on the overfit test. Six healthy runs ranged from 1.744e-07 to 5.432e-04 and the two breaks sat at 1.0 and 3.2, so the bar sits in a gap of nearly four orders of magnitude, 18x above the worst healthy run and 100x below the nearest failure. Nothing I can produce lands in that gap.
+- Set the exploration schedule and run length:
+  - **Epsilon start:** 1.0.
+  - **Epsilon end:** 0.01, so the back half of training has very little random action interference and improvements after 250k mostly reflect learning.
+  - **Decay steps:** 250,000, so exploration falls away early enough that most of Run 1 tests the learned policy.
+  - **Total steps:** 2,000,000, leaving 1.75M steps after the decay to show whether the policy improves and stabilizes.
+- Decay counts from env step 0, not from the end of warmup. Verified in the code. Epsilon is 0.80 at step 50,000 where training starts, and reaches 0.01 at step 250,000.
+- Sticky actions off for Run 1. `ALE/Pong-v5` defaults to `repeat_action_probability=0.25`, the DQN papers had none, and the +18 aspiration is anchored to that setup. Passed as a config value, not hardcoded.
+- Action space: all 6. The DQN papers used each game's minimal legal action set, which for Pong is six, and the +18 aspiration depends on that comparison. The six collapse to three behaviors in pairs, so the full set is kept for comparability, not extra control.
+- The demo's three bars collapse each pair with `max`. The policy is argmax over all six, so the tallest bar is always the action the agent chose. Mean or sum can put a bar on top while the agent does something else.
+- Rewrote the pre registered prediction so it can fail. A plateau is the trailing mean over the last 100 episodes moving less than 1.0 across 200 episodes. It should cross 0 before step 1.2M, and still being below 0 at 1.2M means the schedule is insufficient.
+- Replay buffer stays at 100,000, 5.26 GiB of the 18.69 GiB free. 200k would take 10.5 GiB and risk paging.
+- Decided the last three hyperparameters. `batch_size` 32 and `gamma` 0.99 both match Nature and neither depends on the optimizer. `learning_rate` 1e-4 is a deliberate deviation, since Nature used RMSProp at 0.00025 and rates do not carry over to Adam.
+- Added `repeat_action_probability` and `seed` as parameters to `train()`. The sticky value is read back from the emulator at startup rather than echoed from the argument, so what prints is what the env is actually running.
+- Implemented seeding. `np.random.seed` covers the exploration draw in `select_action` and the batch draw in `ReplayBuffer.sample`, `torch.manual_seed` covers network init, and the env takes the seed on the first reset only.
+- Verified the seeding two ways. Two CPU runs at seed 0 came back byte identical, and a run at seed 1 differed in loss, episode length and reward. The matching pair proved something fixes the RNG, and only the seed 1 run proved it's the seed parameter.
+- Added a startup block printing device, seed, sticky actions, action meanings and network output size, plus an assert on the output size from a real forward pass. Floor 3's confirmations now happen every run instead of by hand, and the extra forward pass was checked against an earlier CPU run to confirm it does not perturb anything.
+- Wrote `scripts/real_train.py`. Its key set matches `train()`'s signature and `tiny_train.py` exactly, so the two configs cannot drift apart. Derived figures check out: 487,501 gradient updates, 48 target syncs, epsilon 0.802 at the first update, 5.26 GiB for the buffer.
+- Changed `epsilon_end` in `scripts/tiny_train.py` from 0.1 to 0.01. It was the only value differing from the real config without being a time or memory number, which made that file's header comment false.
+- Wrote `docs/launch_checklist.md`. Three sections by moment in the run, and only the checks the code cannot do for itself.
+- Accepting GPU nondeterminism for Run 1. The case study's claim is that DQN learns Pong, not that one trajectory replays, so bit reproducibility is not worth an unmeasured slowdown on a run that has to finish before Oct 12.
+- Verified the `nvidia-smi` logger command before putting it in the checklist. All five query fields are valid and `-f` writes clean ASCII. Idle baseline is 40 C at 315 MHz, with 1192 MiB of the 6144 already in use, so VRAM headroom at launch is nearer 4.9 GiB than 6.
+
+## What's open (carrying forward)
+
+- The whole aspiration moves to tomorrow: logging, checkpointing, `scripts/visual_check.py`, and the Run 1 launch. Still inside the Oct 6 to 8 block.
+- Three checklist items cannot be ticked until logging and checkpointing exist. The output path decision to sit outside OneDrive has nowhere to live until then either.
+- No evaluation path. The bar is defined over 100 evaluation episodes, but `train()` has no evaluation epsilon and no evaluation loop, so the 1.2M prediction uses training episodes as a proxy.
+- Which direction `RIGHT` moves the paddle is unverified. The names are joystick names, so labelling the demo's bars from them could invert Up and Down.
+- The determinism throughput comparison, for the Run 2 decision.
+- Find one implementation that actually uses Adam at 1e-4, so the writeup can name it instead of saying it is common.
+- Still in `scripts/visual_check.py` from Sept 12: action hardcoded to `0`, `FORCED_BOUNDARY_STEP`, and the unseeded action space.
+
+## Anything surprising or worth flagging
+
+- Sticky actions are on by default in `ALE/Pong-v5` at 0.25. At the epsilon I had just chosen, the environment would have overridden the policy about 25 times more often than my own exploration does, which would have made the whole argument for 0.01 over 0.1 meaningless. I reasoned out the schedule before checking the environment defaults.
+- The six actions are not six behaviors. My first written reason for keeping all six was that the full action space lets the agent learn a complete control policy, which is not true for Pong. The decision survived, the reason did not.
+- Seeding does not make a GPU run reproducible, and the divergence is behavioral rather than numerical. Two GPU runs at seed 0 ended episode 1 at steps 900 and 928, because a perturbed weight flips an argmax, which changes the action, which changes the data.
+- Two identical runs weren't enough to prove the seeding worked. They showed the run was deterministic, not that seed was what made it so. Only changing the seed and watching the output change proved the parameter threads through.
+- 1192 MiB of the 6144 is already in use at idle, so VRAM headroom at launch is nearer 4.9 GiB than 6.
+
+---
