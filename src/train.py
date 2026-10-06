@@ -2,6 +2,7 @@ import math
 
 import ale_py
 import gymnasium
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -59,9 +60,14 @@ def train(
     epsilon_decay_steps,
     learning_rate,
     gamma,
+    repeat_action_probability,
+    seed,
 ) -> None:
     if warmup_steps < batch_size:
         raise ValueError("warmup_steps must be >= batch_size")
+
+    if not 0.0 <= repeat_action_probability <= 1.0:
+        raise ValueError("repeat_action_probability must be between 0.0 and 1.0")
 
     if train_every <= 0:
         raise ValueError("train_every must be > 0")
@@ -79,7 +85,20 @@ def train(
     else:
         print("Training device: CPU")
 
-    env = gymnasium.make("ALE/Pong-v5")
+    # Seeded before anything draws. np.random covers both select_action and
+    # ReplayBuffer.sample. Not bit reproducible on GPU.
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability)
+    env.action_space.seed(seed)
+
+    # Read back from the emulator, not the argument, so this is what is running.
+    actual_sticky = env.unwrapped.ale.getFloat("repeat_action_probability")
+    print(f"Seed: {seed}")
+    print(f"Sticky actions: {actual_sticky}")
+    print(f"Action meanings: {env.unwrapped.get_action_meanings()}")
+
     n_actions = env.action_space.n
     prep = Preprocessor()
 
@@ -89,11 +108,22 @@ def train(
 
     replay_buffer = ReplayBuffer(capacity=buffer_capacity)
 
-    # Only the Q network's parameters, so the target never moves between syncs.
+    # The optimizer holds only the Q network, so the target changes only at a sync.
     optimizer = optim.Adam(q_network.parameters(), lr=learning_rate)
 
-    obs, _ = env.reset()
+    # Only the first reset takes the seed, so later resets continue the stream.
+    obs, _ = env.reset(seed=seed)
     stacked = prep.reset(obs)
+
+    # The output size follows the env, so a mismatch here means the two have
+    # come apart. Checked on a real forward pass, not on the layer definition.
+    with torch.no_grad():
+        probe = q_network(transform(stacked, device))
+
+    assert probe.shape[-1] == n_actions, (
+        f"Network outputs {probe.shape[-1]} actions, env has {n_actions}"
+    )
+    print(f"Network output size: {probe.shape[-1]}")
 
     gradient_updates = 0
     episodes_finished = 0

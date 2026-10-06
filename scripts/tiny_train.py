@@ -18,10 +18,12 @@ TINY_CONFIG = {
     "batch_size": 32,
     "target_sync_every_updates": 100,  # counted in gradient updates, not env steps
     "epsilon_start": 1.0,
-    "epsilon_end": 0.1,
+    "epsilon_end": 0.01,
     "epsilon_decay_steps": 500,
     "learning_rate": 1e-4,
     "gamma": 0.99,
+    "repeat_action_probability": 0.0,  # off, matching the DQN papers
+    "seed": 0,
 }
 
 if __name__ == "__main__":
