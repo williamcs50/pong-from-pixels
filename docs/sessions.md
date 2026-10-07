@@ -439,3 +439,29 @@
 - 1192 MiB of the 6144 is already in use at idle, so VRAM headroom at launch is nearer 4.9 GiB than 6.
 
 ---
+
+# Wednesday: Run 1 Launch
+
+**Date:** 2026-10-07
+
+**Floor:**
+
+1. **Add the minimum logging and checkpointing needed for the first real run:** write episode reward, episode number, and relevant training information to disk, and save model checkpoints on a defined schedule so the run produces recoverable data and usable milestone models from the beginning.
+2. **Bring `scripts/visual_check.py` in line with the real training code:** remove the hardcoded action `0`, remove `FORCED_BOUNDARY_STEP`, and seed the action space so the visual check uses the same action selection and episode boundary behavior as the training loop. Run the script afterward and confirm it still produces the expected gameplay behavior.
+3. **Launch Run 1 on the PC:** verify the training loop reports `Training device: GPU`, fills the replay buffer, reaches the training phase, and begins updating the network without errors. If this point is reached with logging and checkpointing fully operational, let the run continue as the actual first real training run.
+
+**Aspiration:**
+
+1. **Use real numbers in the launch checklist.** Fill in `temperature below ___ °C` before launch. Record warmup steps per second, projected time for 2,000,000 steps, and the launch commit hash. If Run 1 will extend past the diagnosis block, reduce the step count or change the run now.
+2. **Build relaunch instrumentation.** Log Q value drift, actual epsilon, replay dynamics, and episode reward. Verify it on a tiny run while Run 1 collects the baseline curve. The instrumentation will require a restart.
+3. **Close the evaluation gap.** The criterion is average reward above 0 over 100 evaluation episodes, but `train()` has no evaluation loop or evaluation epsilon. Add checkpoint evaluation with 100 episodes at fixed low epsilon so the 1.2M prediction uses the actual criterion.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
+
+---

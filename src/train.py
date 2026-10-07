@@ -1,4 +1,10 @@
+import csv
+import datetime
+import json
 import math
+import os
+import subprocess
+import time
 
 import ale_py
 import gymnasium
@@ -8,12 +14,36 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from src.action_selector import select_action
+from src.checkpoint import save_checkpoint
 from src.preprocess import Preprocessor
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
 from src.transform import transform
 
 gymnasium.register_envs(ale_py)
+
+
+def _git_state() -> dict:
+    # A hash recorded while files were modified does not describe the code that ran,
+    # so the status comes back with it. Untracked files count: src/checkpoint.py was
+    # untracked and imported here, so a new unignored file can change behaviour.
+    # commit None means git was unusable, which is unverifiable rather than clean.
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def run(*command):
+        return subprocess.run(
+            command, cwd=repo_root, capture_output=True, text=True, check=True
+        ).stdout.strip()
+
+    try:
+        status = run("git", "status", "--porcelain")
+        # Full hash, not --short: short hashes are a display convenience and can
+        # become ambiguous as the history grows.
+        return {"git_commit": run("git", "rev-parse", "HEAD"),
+                "git_dirty": bool(status),
+                "git_status": status}
+    except (OSError, subprocess.CalledProcessError):
+        return {"git_commit": None, "git_dirty": None, "git_status": ""}
 
 
 def train_step(q_network, target_network, optimizer, batch, gamma) -> float:
@@ -62,6 +92,9 @@ def train(
     gamma,
     repeat_action_probability,
     seed,
+    output_dir,
+    checkpoint_every_steps,
+    allow_dirty,
 ) -> None:
     if warmup_steps < batch_size:
         raise ValueError("warmup_steps must be >= batch_size")
@@ -77,6 +110,29 @@ def train(
 
     if epsilon_decay_steps <= 0:
         raise ValueError("epsilon_decay_steps must be > 0")
+
+    if checkpoint_every_steps <= 0:
+        raise ValueError("checkpoint_every_steps must be > 0")
+
+    # Refused here rather than warned about, because a dirty tree makes git_commit
+    # a lie and nothing about a finished run can fix that retroactively.
+    git = _git_state()
+
+    if git["git_dirty"] and not allow_dirty:
+        raise RuntimeError(
+            "working tree is dirty, so the recorded commit would not describe this run:\n"
+            f"{git['git_status']}\n"
+            "commit the changes, or pass allow_dirty for a throwaway run"
+        )
+
+    # Checked before the buffer allocates. An existing log means this directory
+    # already holds a run, and appending would interleave two in one file.
+    checkpoint_dir = os.path.join(output_dir, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    log_path = os.path.join(output_dir, "episodes.csv")
+
+    if os.path.exists(log_path):
+        raise FileExistsError(f"{log_path} already exists, use a new output_dir for this run")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -98,6 +154,13 @@ def train(
     print(f"Seed: {seed}")
     print(f"Sticky actions: {actual_sticky}")
     print(f"Action meanings: {env.unwrapped.get_action_meanings()}")
+    print(f"Output directory: {os.path.abspath(output_dir)}")
+    print(f"Commit: {git['git_commit']}")
+
+    if git["git_dirty"]:
+        print("WARN  dirty tree allowed, the commit above does not describe this run")
+    elif git["git_commit"] is None:
+        print("WARN  git unusable, so the code version for this run is unrecorded")
 
     n_actions = env.action_space.n
     prep = Preprocessor()
@@ -125,9 +188,76 @@ def train(
     )
     print(f"Network output size: {probe.shape[-1]}")
 
+    # The output directory is chosen at launch, not committed, so the commit hash
+    # alone does not say what ran where. This makes each run self describing.
+    run_config = {
+        "total_steps": total_steps,
+        "buffer_capacity": buffer_capacity,
+        "warmup_steps": warmup_steps,
+        "train_every": train_every,
+        "batch_size": batch_size,
+        "target_sync_every_updates": target_sync_every_updates,
+        "epsilon_start": epsilon_start,
+        "epsilon_end": epsilon_end,
+        "epsilon_decay_steps": epsilon_decay_steps,
+        "learning_rate": learning_rate,
+        "gamma": gamma,
+        "repeat_action_probability": repeat_action_probability,
+        "seed": seed,
+        "output_dir": os.path.abspath(output_dir),
+        "checkpoint_every_steps": checkpoint_every_steps,
+        "allow_dirty": allow_dirty,
+        "git_commit": git["git_commit"],
+        "git_dirty": git["git_dirty"],
+        # Read back at runtime, not echoed from the arguments.
+        "device": str(device),
+        "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
+        "sticky_actions_readback": actual_sticky,
+        "n_actions": int(n_actions),
+        "started_at": datetime.datetime.now().isoformat(timespec="seconds"),
+    }
+
+    with open(os.path.join(output_dir, "run_config.json"), "w") as config_file:
+        json.dump(run_config, config_file, indent=2)
+
+    def checkpoint_path(at_step: int) -> str:
+        return os.path.join(checkpoint_dir, f"step_{at_step:08d}.pt")
+
     gradient_updates = 0
     episodes_finished = 0
     episode_reward = 0.0
+    episode_steps = 0
+    episode_loss_total = 0.0
+    episode_loss_count = 0
+    started_at = time.perf_counter()
+
+    # The random milestone, gone once the first gradient update lands.
+    save_checkpoint(
+        checkpoint_path(0),
+        q_network=q_network,
+        target_network=target_network,
+        optimizer=optimizer,
+        env_step=0,
+        episode=0,
+        gradient_updates=0,
+    )
+    print(f"checkpoint written: {os.path.basename(checkpoint_path(0))}")
+
+    # Every row is pushed to disk as it is written, so a crash loses nothing.
+    log_file = open(log_path, "w", newline="")
+    log_writer = csv.writer(log_file)
+    log_writer.writerow([
+        "episode",
+        "env_step",
+        "reward",
+        "episode_steps",
+        "epsilon",
+        "gradient_updates",
+        "buffer_size",
+        "mean_loss",
+        "wall_clock_s",
+    ])
+    log_file.flush()
 
     for step in range(total_steps):
         # Linear epsilon decay
@@ -146,6 +276,7 @@ def train(
         # Step environment
         next_obs, reward, terminated, truncated, _ = env.step(action)
         episode_reward += reward
+        episode_steps += 1
 
         # Preprocess / stack the next frame
         next_stacked = prep.step(next_obs)
@@ -167,7 +298,26 @@ def train(
             end_reason = "terminated" if terminated else "truncated"
             print(f"episode {episodes_finished} ended at step {step + 1} ({end_reason}), "
                   f"reward={episode_reward:+.0f}, epsilon={epsilon:.3f}")
+
+            # Blank, not 0.0, when no update ran, so a real zero loss stays distinct.
+            mean_loss = f"{episode_loss_total / episode_loss_count:.6f}" if episode_loss_count else ""
+            log_writer.writerow([
+                episodes_finished,
+                step + 1,
+                f"{episode_reward:.1f}",
+                episode_steps,
+                f"{epsilon:.6f}",
+                gradient_updates,
+                len(replay_buffer),
+                mean_loss,
+                f"{time.perf_counter() - started_at:.1f}",
+            ])
+            log_file.flush()
+
             episode_reward = 0.0
+            episode_steps = 0
+            episode_loss_total = 0.0
+            episode_loss_count = 0
 
             obs, _ = env.reset()
             stacked = prep.reset(obs)
@@ -187,6 +337,8 @@ def train(
             )
 
             gradient_updates += 1
+            episode_loss_total += loss
+            episode_loss_count += 1
 
             # Stop the moment a NaN or inf shows up instead of training on it for hours.
             if not math.isfinite(loss):
@@ -201,6 +353,34 @@ def train(
                     q_network.state_dict()
                 )
                 print(f"target synced at update {gradient_updates}")
+
+        # Counted in env steps, unlike the target sync above.
+        if env_step % checkpoint_every_steps == 0:
+            save_checkpoint(
+                checkpoint_path(env_step),
+                q_network=q_network,
+                target_network=target_network,
+                optimizer=optimizer,
+                env_step=env_step,
+                episode=episodes_finished,
+                gradient_updates=gradient_updates,
+            )
+            print(f"checkpoint written: {os.path.basename(checkpoint_path(env_step))}")
+
+    # Skipped when the loop's last step already triggered one.
+    if total_steps % checkpoint_every_steps != 0:
+        save_checkpoint(
+            checkpoint_path(total_steps),
+            q_network=q_network,
+            target_network=target_network,
+            optimizer=optimizer,
+            env_step=total_steps,
+            episode=episodes_finished,
+            gradient_updates=gradient_updates,
+        )
+        print(f"checkpoint written: {os.path.basename(checkpoint_path(total_steps))}")
+
+    log_file.close()
 
     # Printed even if no episode finished, so a silent run can't pass for a clean one.
     print(f"done: {total_steps} steps, {episodes_finished} episodes finished, "
