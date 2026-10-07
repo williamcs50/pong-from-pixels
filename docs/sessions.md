@@ -460,8 +460,36 @@
 
 ## What landed today
 
+Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
+
+- `episodes.csv` written one row per finished episode, pushed to disk as each row lands: `episode`, `env_step`, `reward`, `episode_steps`, `epsilon`, `gradient_updates`, `buffer_size`, `mean_loss`, `wall_clock_s`. `buffer_size` is beyond the agreed schema, added so Floor 3's "fills the replay buffer" clause is observable rather than inferred. `mean_loss` is blank rather than 0.0 when no update ran.
+- `src/checkpoint.py` built. A checkpoint holds Q weights, target weights, Adam state, the numpy, torch and CUDA RNG states, and the `env_step`, `episode` and `gradient_updates` counters, without which a resume restarts the epsilon schedule and the target sync. The buffer is excluded at 5.26 GiB a save. Writes go to a temp name and are renamed, so dying mid write cannot leave a truncated newest checkpoint. Step 0 plus every 50,000 steps, so 40 files at 27 MB.
+- `src/run_paths.py` built. One `RUNS_ROOT` at `~/pong-runs`, outside the OneDrive sync root, imported by both launch scripts so they cannot drift. Tiny runs sit under `~/pong-runs/tiny` so they never take a real run number.
+- `run_config.json` per run holds every config value plus the device, GPU name, sticky actions readback, action count, `git_dirty` and the full commit hash. `train()` refuses to start if `episodes.csv` already exists, and refuses on a dirty tree unless `allow_dirty` is passed, since a hash recorded with modified files does not describe what ran. Untracked files count, because `src/checkpoint.py` and `src/run_paths.py` were untracked this morning and `train()` imports both.
+- `real_train.py` now takes `--total-steps`, `--output-dir` and `--allow-dirty`, so the warmup pass is Run 1 with one number changed rather than a separate script. Since epsilon decays from step 0, a 70,000 step warmup is literally Run 1's first 70,000 steps.
+- `tiny_train.py` went from 1,000 to 1,500 steps and now asserts the log holds at least one row. Episode 1 ended at 838, 838, 935, 838 and 838 across five runs, so 1,000 left only 65 steps of margin before a run would log nothing and still print `done:`.
+- `scripts/play_checkpoint.py` built: loads a checkpoint, plays whole episodes, and reports mean reward, an action histogram, and the counters from the file. It verifies the load rather than assuming it, and the verdict only prints at 100 episodes or more.
+- `scripts/visual_check.py`: hardcoded action `0` replaced with the sampled action, `FORCED_BOUNDARY_STEP` removed, and one `SEED = 42` feeding `np.random.seed`, `env.reset` and `env.action_space.seed`. `BUILD_STEPS` went from 60 to 1,200, derived from a measurement rather than picked: the first episode terminates at 1100 at seed 42 and 959 at seed 7. Paddle labels renamed to `left (opponent)` and `right (agent)`, since CPU collided with the training device.
+- Reran it clean: transform round trip diff 0, one ball component, left paddle height 7 inside the derived set of 6 or 7, column deltas 2.0, 2.0, 2.0 with no sign changes, and one real episode boundary at step 1100.
+- Verified rather than assumed: the overwrite refusal raises, a blank `mean_loss` appears when nothing trained, the final checkpoint fallback produces 0, 400, 800, 900 at `total_steps` 900, a loaded checkpoint returns the counters the run printed, `taskkill /F` left 48 rows intact with `close()` never running and no `.tmp` behind, and 100 episodes played at 4.05 percent random against the 0.05 target. Both new assertions were also proven able to fail. 28 of 28 tests pass.
+
 ## What's open (carrying forward)
 
+- **All of Floor 3.** The warmup pass, the rate measurement, the projection, and the Run 1 launch.
+- Pre launch items not done: the temperature blank in `docs/launch_checklist.md`, Windows Update not paused, and sleep on AC still at 1200 seconds rather than never, which matters because Windows measures idle by user input and not GPU load. The commit is local only.
+- No test covers logging or checkpointing. Today's evidence is manual runs, not something the suite rechecks.
+- Aspiration 2 was not started. Aspiration 3 is partly closed, since `play_checkpoint.py` is the evaluation kernel but nothing wires an evaluation pass into `train()`, so the 1.2M prediction still uses training episodes as a proxy.
+- `train()` runs a forward pass every step and `select_action` discards it on the random branch, so almost all of that work is wasted during the warmup at epsilon near 1.0.
+- The driven UP and DOWN rollout in `visual_check.py` is still open from Sept 12, and which direction `RIGHT` moves the paddle is still unverified.
+- Proven by construction rather than by test: a kill landing mid checkpoint save, and the `True` side of the evaluation verdict, which stays unexercised until a checkpoint wins.
+
 ## Anything surprising or worth flagging
+
+- Loading a checkpoint is where a real bug surfaced, and saving one would never have found it. `map_location` moves every tensor onto the GPU, including the RNG state, and `torch.set_rng_state` rejects anything that is not a CPU ByteTensor, so a resume would have crashed. The fix is `.cpu()` before restoring.
+- Seeding the action space alone did not make `visual_check.py` repeatable. Two seeded runs still disagreed, and only on the two sampled stack sections, because `ReplayBuffer.sample` draws with `np.random.choice` and nothing seeded `np.random`.
+- Seeding that script was a trade, not a pure win. Unseeded, every run inspected a different frame, so the paddles got checked at a variety of heights by accident. Seeded, it is the same frame forever, and a renderer bug at the bottom extreme is now permanently invisible rather than occasionally caught.
+- The failure criterion written in advance for the playback test was wrong. It said -21 every episode in minimum steps would mean the network was not influencing the action. The greedy policy picks action 2 on 2,199 of 2,292 steps, pinning the paddle where it never touches the ball, and with no contact the ball's path does not depend on the paddle, so every episode is identical. A learned but degenerate constant policy produces exactly the signature called failure. The action histogram is the real discriminator and is now printed.
+- The 806 to 816 env steps per second from the kill tests is not the figure the projection needs. `gradient_updates` is 0 on every row, so it is the fill phase only, and projecting 2,000,000 steps from it would give 41 minutes and be badly wrong.
+- The run is bit for bit deterministic until the first gradient update. Two kill tests produced identical episode boundaries through step 41,681, because no updates means the weights never change and both RNG sources are seeded.
 
 ---
