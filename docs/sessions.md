@@ -515,6 +515,8 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 - Measured the three checklist numbers. 252.1 steps per second after warmup, measured across 274 seconds from step 50,811 to 119,876 rather than from adjacent rows. That projects 2.20 hours for 2,000,000 steps, which clears Oct 12, so I am not cutting the step count and the pre registered 1.2M crossing stands as written. Peak load temperature 52 °C against the 88 limit.
 - The fill phase ran at 809 steps per second, matching yesterday's 806 and 816. Training is 3.2 times slower, which is why the fill rate was never the number to project from.
 - Episode boundaries through step 49,987 matched yesterday's kill tests exactly and diverged after the first gradient update, which is the determinism property behaving as expected.
+- Launched Run 1 at 13:55 into `run-01`, 2,000,000 steps, with commit `afb91fae0b1c1408009cb5385980f432c99f7ec7` recorded and `git_dirty` false. The loop based logger writes `gpu_log.csv` live this time, header included.
+- Predicted the end of run reward before reading the rows: positive, around +10. My Oct 6 pre registration has the trailing mean crossing 0 before step 1.2M, which leaves about 800,000 steps of runway at epsilon 0.01. The buffer at 100,000 against Nature's 1,000,000 is why it could fall short, and 8,000,000 frames against Nature's 50,000,000 is why I am not predicting the +18 aspiration.
 
 ## What's open (carrying forward)
 
