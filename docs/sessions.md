@@ -493,3 +493,25 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 - The run is bit for bit deterministic until the first gradient update. Two kill tests produced identical episode boundaries through step 41,681, because no updates means the weights never change and both RNG sources are seeded.
 
 ---
+
+# Thursday: Warmup and Launch
+
+**Date:** 2026-10-08
+
+**Floor:**
+
+**Launch Run 1 on the PC:** verify the training loop reports `Training device: GPU`, fills the replay buffer, reaches the training phase, and begins updating the network without errors. Before launching, get the checklist numbers from a warmup pass at Run 1 settings: load temperature, steps per second after warmup, and the projected time for the full run. If the projected finish does not land before Oct 12, when the diagnosis block opens, cut the step count first and restate the pre registered crossing. If this point is reached with logging and checkpointing fully operational, let the run continue as the actual first real training run.
+
+**Aspiration:**
+
+**Close the evaluation gap.** Run the checkpoint evaluation across a whole run rather than one checkpoint at a time, writing a row per checkpoint so the evaluation curve can be read against the bar instead of training reward standing in for it. Done means that file exists and Run 1's first checkpoints are in it. Evaluation shares the card with Run 1, so it runs only after Run 1's rate and temperature readings are taken, and only on the first few checkpoints, so a slowdown afterwards is attributable rather than confused with throttling.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
+
+---
