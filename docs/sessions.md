@@ -510,8 +510,18 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 
 ## What landed today
 
+- Ran the warmup pass at Run 1 settings, 120,000 steps into `run-00-warmup`. 131 episodes, 17,501 updates, one target sync at update 10,000, and checkpoints at 0, 50,000, 100,000 and 120,000. `run_config.json` recorded commit `f9ce3b66d9a8c41105676bba87ae8453d4e9cb82` with `git_dirty` false, matching `HEAD`. The 120,000 file is the first time the final checkpoint fallback has fired under the real config.
+- `step_00050000.pt` came out at 27 MB against step 0's 13.5 MB, so Adam state is in it and the loop does update before it saves.
+- Measured the three checklist numbers. 252.1 steps per second after warmup, measured across 274 seconds from step 50,811 to 119,876 rather than from adjacent rows. That projects 2.20 hours for 2,000,000 steps, which clears Oct 12, so I am not cutting the step count and the pre registered 1.2M crossing stands as written. Peak load temperature 52 °C against the 88 limit.
+- The fill phase ran at 809 steps per second, matching yesterday's 806 and 816. Training is 3.2 times slower, which is why the fill rate was never the number to project from.
+- Episode boundaries through step 49,987 matched yesterday's kill tests exactly and diverged after the first gradient update, which is the determinism property behaving as expected.
+
 ## What's open (carrying forward)
 
 ## Anything surprising or worth flagging
+
+- The GPU is barely working. 27 to 39 percent utilization, 26 to 30 W on a card rated near 160, clocks at 800 to 1,000 MHz rather than near boost, and VRAM at 2,207 MiB of 6,144. At 252 steps per second with the card two thirds idle, the bottleneck is the CPU side: one Pong instance, the frame preprocessing, and the per step Python loop. That also explains the fill phase managing 809 steps per second with no GPU work in it.
+- `nvidia-smi -f` buffers its output instead of flushing each sample. `gpu_log.csv` sat at 0 bytes for the whole run and only appeared when I stopped the process, so the first five minutes thermal check cannot be done live with that command.
+- The checklist item "clock not dropping as temperature rises" would have flagged this healthy run. The clock swung from 1,290 down to 795 MHz while temperature stayed in the forties and fifties, which is the card idling down for lack of work. A falling clock only means throttling when the temperature is near the limit.
 
 ---
