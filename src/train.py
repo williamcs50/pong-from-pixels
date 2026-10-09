@@ -3,7 +3,6 @@ import datetime
 import json
 import math
 import os
-import subprocess
 import time
 
 import ale_py
@@ -16,34 +15,12 @@ import torch.optim as optim
 from src.action_selector import select_action
 from src.checkpoint import save_checkpoint
 from src.preprocess import Preprocessor
+from src.git_info import git_state
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
 from src.transform import transform
 
 gymnasium.register_envs(ale_py)
-
-
-def _git_state() -> dict:
-    # A hash recorded while files were modified does not describe the code that ran,
-    # so the status comes back with it. Untracked files count: src/checkpoint.py was
-    # untracked and imported here, so a new unignored file can change behaviour.
-    # commit None means git was unusable, which is unverifiable rather than clean.
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    def run(*command):
-        return subprocess.run(
-            command, cwd=repo_root, capture_output=True, text=True, check=True
-        ).stdout.strip()
-
-    try:
-        status = run("git", "status", "--porcelain")
-        # Full hash, not --short: short hashes are a display convenience and can
-        # become ambiguous as the history grows.
-        return {"git_commit": run("git", "rev-parse", "HEAD"),
-                "git_dirty": bool(status),
-                "git_status": status}
-    except (OSError, subprocess.CalledProcessError):
-        return {"git_commit": None, "git_dirty": None, "git_status": ""}
 
 
 def train_step(q_network, target_network, optimizer, batch, gamma) -> float:
@@ -116,7 +93,7 @@ def train(
 
     # Refused here rather than warned about, because a dirty tree makes git_commit
     # a lie and nothing about a finished run can fix that retroactively.
-    git = _git_state()
+    git = git_state()
 
     if git["git_dirty"] and not allow_dirty:
         raise RuntimeError(
