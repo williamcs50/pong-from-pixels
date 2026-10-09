@@ -517,12 +517,20 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 - Episode boundaries through step 49,987 matched yesterday's kill tests exactly and diverged after the first gradient update, which is the determinism property behaving as expected.
 - Launched Run 1 at 13:55 into `run-01`, 2,000,000 steps, with commit `afb91fae0b1c1408009cb5385980f432c99f7ec7` recorded and `git_dirty` false. The loop based logger writes `gpu_log.csv` live this time, header included.
 - Predicted the end of run reward before reading the rows: positive, around +10. My Oct 6 pre registration has the trailing mean crossing 0 before step 1.2M, which leaves about 800,000 steps of runway at epsilon 0.01. The buffer at 100,000 against Nature's 1,000,000 is why it could fall short, and 8,000,000 frames against Nature's 50,000,000 is why I am not predicting the +18 aspiration.
+- Run 1 finished in 2.19 hours against the 2.20 projected. Both predictions were wrong. The trailing 100 mean never crossed 0, ending at -0.11, and at step 1.2M it was -10.17, so by the terms of the Oct 6 entry the schedule is insufficient. The curve was still climbing at the final step and never plateaued by my own definition, and episode length more than quadrupled with no shutouts in the last 100 episodes, so the learning is real and the run ran out of steps. Every figure is in [runs/run-01.md](runs/run-01.md).
+- Wrote `docs/runs/run-01.md` as the reference for this run, with every figure pulled from `run_config.json`, `episodes.csv` and `gpu_log.csv`. Run 1's story spans into the Oct 12 diagnosis block, so it needs one place to live rather than three daily entries.
+- Committed those three files for both runs under `docs/runs/`, 116 KB of text, and wrote `scripts/analyze_run.py` to print every figure from them. One command rather than the five chained one liners I started with, so a reader can check the numbers instead of trusting them. The 1.02 GB of checkpoints stays out.
 
 ## What's open (carrying forward)
 
+- The aspiration. The checkpoint evaluation sweep was not built, so Run 1's result still rests on training episodes rather than the 100 episode evaluation the bar is defined over.
+- Restating the pre registered crossing. The Oct 6 version was answered and failed, so Run 2 needs a new prediction in terms of whatever step count it uses.
+- The Task Manager reading of buffer RAM against the expected 5.26 GiB. Run 1 has exited, so this carries to the next run.
+- Carried forward unchanged: the driven UP and DOWN rollout in `scripts/visual_check.py`, which direction `RIGHT` moves the paddle, no test covering logging or checkpointing, and the stale note at `scripts/check_environment.py` line 79.
+
 ## Anything surprising or worth flagging
 
-- The GPU is barely working. 27 to 39 percent utilization, 26 to 30 W on a card rated near 160, clocks at 800 to 1,000 MHz rather than near boost, and VRAM at 2,207 MiB of 6,144. At 252 steps per second with the card two thirds idle, the bottleneck is the CPU side: one Pong instance, the frame preprocessing, and the per step Python loop. That also explains the fill phase managing 809 steps per second with no GPU work in it.
+- The GPU is barely working. Across Run 1's 132 minutes it peaked at 42 percent utilization, 51.3 W on a card rated near 160, and 2,266 MiB of 6,144. At 253 steps per second with the card well under half loaded, the bottleneck is the CPU side: one Pong instance, the frame preprocessing, and the per step Python loop. That also explains the fill phase managing 809 steps per second with no GPU work in it. The warmup understated all of this, peaking at 52 °C, 1,290 MHz and 30 W, because 6 minutes never reached steady state.
 - `nvidia-smi -f` buffers its output instead of flushing each sample. `gpu_log.csv` sat at 0 bytes for the whole run and only appeared when I stopped the process, so the first five minutes thermal check cannot be done live with that command.
 - The checklist item "clock not dropping as temperature rises" would have flagged this healthy run. The clock swung from 1,290 down to 795 MHz while temperature stayed in the forties and fifties, which is the card idling down for lack of work. A falling clock only means throttling when the temperature is near the limit.
 
