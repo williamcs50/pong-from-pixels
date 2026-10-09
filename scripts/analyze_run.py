@@ -37,7 +37,9 @@ def report_episodes(path):
 
     print(f"episodes          {len(rows):,}")
     print(f"final env_step    {steps[-1]:,}")
-    print(f"gradient updates  {int(rows[-1]['gradient_updates']):,}")
+    # From the last logged episode, not the run's total: the final episode ends
+    # before the final step, so this undercounts by the updates in between.
+    print(f"updates at last ep {int(rows[-1]['gradient_updates']):,}")
     print(f"wall clock        {wall / 3600:.2f} h")
     print(f"overall rate      {steps[-1] / wall:.1f} steps/s")
 
