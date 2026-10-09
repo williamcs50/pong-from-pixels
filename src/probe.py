@@ -1,5 +1,4 @@
 import hashlib
-import os
 
 import ale_py
 import gymnasium
