@@ -493,3 +493,45 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 - The run is bit for bit deterministic until the first gradient update. Two kill tests produced identical episode boundaries through step 41,681, because no updates means the weights never change and both RNG sources are seeded.
 
 ---
+
+# Thursday: Warmup and Launch
+
+**Date:** 2026-10-08
+
+**Floor:**
+
+**Launch Run 1 on the PC:** verify the training loop reports `Training device: GPU`, fills the replay buffer, reaches the training phase, and begins updating the network without errors. Before launching, get the checklist numbers from a warmup pass at Run 1 settings: load temperature, steps per second after warmup, and the projected time for the full run. If the projected finish does not land before Oct 12, when the diagnosis block opens, cut the step count first and restate the pre registered crossing. If this point is reached with logging and checkpointing fully operational, let the run continue as the actual first real training run.
+
+**Aspiration:**
+
+**Close the evaluation gap.** Run the checkpoint evaluation across a whole run rather than one checkpoint at a time, writing a row per checkpoint so the evaluation curve can be read against the bar instead of training reward standing in for it. Done means that file exists and Run 1's first checkpoints are in it. Evaluation shares the card with Run 1, so it runs only after Run 1's rate and temperature readings are taken, and only on the first few checkpoints, so a slowdown afterwards is attributable rather than confused with throttling.
+
+---
+
+## What landed today
+
+- Ran the warmup pass at Run 1 settings, 120,000 steps into `run-00-warmup`. 131 episodes, 17,501 updates, one target sync at update 10,000, and checkpoints at 0, 50,000, 100,000 and 120,000. `run_config.json` recorded commit `f9ce3b66d9a8c41105676bba87ae8453d4e9cb82` with `git_dirty` false, matching `HEAD`. The 120,000 file is the first time the final checkpoint fallback has fired under the real config.
+- `step_00050000.pt` came out at 27 MB against step 0's 13.5 MB, so Adam state is in it and the loop does update before it saves.
+- Measured the three checklist numbers. 252.1 steps per second after warmup, measured across 274 seconds from step 50,811 to 119,876 rather than from adjacent rows. That projects 2.20 hours for 2,000,000 steps, which clears Oct 12, so I am not cutting the step count and the pre registered 1.2M crossing stands as written. Peak load temperature 52 °C against the 88 limit.
+- The fill phase ran at 809 steps per second, matching yesterday's 806 and 816. Training is 3.2 times slower, which is why the fill rate was never the number to project from.
+- Episode boundaries through step 49,987 matched yesterday's kill tests exactly and diverged after the first gradient update, which is the determinism property behaving as expected.
+- Launched Run 1 at 13:55 into `run-01`, 2,000,000 steps, with commit `afb91fae0b1c1408009cb5385980f432c99f7ec7` recorded and `git_dirty` false. The loop based logger writes `gpu_log.csv` live this time, header included.
+- Predicted the end of run reward before reading the rows: positive, around +10. My Oct 6 pre registration has the trailing mean crossing 0 before step 1.2M, which leaves about 800,000 steps of runway at epsilon 0.01. The buffer at 100,000 against Nature's 1,000,000 is why it could fall short, and 8,000,000 frames against Nature's 50,000,000 is why I am not predicting the +18 aspiration.
+- Run 1 finished in 2.19 hours against the 2.20 projected. Both predictions were wrong. The trailing 100 mean never crossed 0, ending at -0.11, and at step 1.2M it was -10.17, so by the terms of the Oct 6 entry the schedule is insufficient. The curve was still climbing at the final step and never plateaued by my own definition, and episode length more than quadrupled with no shutouts in the last 100 episodes, so the learning is real and the run ran out of steps. Every figure is in [runs/run-01.md](runs/run-01.md).
+- Wrote `docs/runs/run-01.md` as the reference for this run, with every figure pulled from `run_config.json`, `episodes.csv` and `gpu_log.csv`. Run 1's story spans into the Oct 12 diagnosis block, so it needs one place to live rather than three daily entries.
+- Committed those three files for both runs under `docs/runs/`, 116 KB of text, and wrote `scripts/analyze_run.py` to print every figure from them. One command rather than the five chained one liners I started with, so a reader can check the numbers instead of trusting them. The 1.02 GB of checkpoints stays out.
+
+## What's open (carrying forward)
+
+- The aspiration. The checkpoint evaluation sweep was not built, so Run 1's result still rests on training episodes rather than the 100 episode evaluation the bar is defined over.
+- Restating the pre registered crossing. The Oct 6 version was answered and failed, so Run 2 needs a new prediction in terms of whatever step count it uses.
+- The Task Manager reading of buffer RAM against the expected 5.26 GiB. Run 1 has exited, so this carries to the next run.
+- Carried forward unchanged: the driven UP and DOWN rollout in `scripts/visual_check.py`, which direction `RIGHT` moves the paddle, no test covering logging or checkpointing, and the stale note at `scripts/check_environment.py` line 79.
+
+## Anything surprising or worth flagging
+
+- The GPU is barely working. Across Run 1's 132 minutes it peaked at 42 percent utilization, 51.3 W on a card rated near 160, and 2,266 MiB of 6,144. At 253 steps per second with the card well under half loaded, the bottleneck is the CPU side: one Pong instance, the frame preprocessing, and the per step Python loop. That also explains the fill phase managing 809 steps per second with no GPU work in it. The warmup understated all of this, peaking at 52 °C, 1,290 MHz and 30 W, because 6 minutes never reached steady state.
+- `nvidia-smi -f` buffers its output instead of flushing each sample. `gpu_log.csv` sat at 0 bytes for the whole run and only appeared when I stopped the process, so the first five minutes thermal check cannot be done live with that command.
+- The checklist item "clock not dropping as temperature rises" would have flagged this healthy run. The clock swung from 1,290 down to 795 MHz while temperature stayed in the forties and fifties, which is the card idling down for lack of work. A falling clock only means throttling when the temperature is near the limit.
+
+---
