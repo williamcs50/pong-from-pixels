@@ -535,3 +535,25 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 - The checklist item "clock not dropping as temperature rises" would have flagged this healthy run. The clock swung from 1,290 down to 795 MHz while temperature stayed in the forties and fifties, which is the card idling down for lack of work. A falling clock only means throttling when the temperature is near the limit.
 
 ---
+
+# Friday: Instrumentation and Run 2
+
+**Date:** 2026-10-09
+
+**Floor:**
+
+**Build the relaunch instrumentation and launch Run 2.** Alongside episode reward, log Q value drift on a fixed probe batch, the epsilon actually in use, and replay dynamics. Verify it works on a tiny run, then measure its throughput cost with a warmup pass at Run 2 settings, with nothing else on the card so the rate stays clean. The 6.6 hour estimate stays an assumption until that measurement is in. Before launching, write Run 2's pre registration: when the trailing mean is expected to cross zero, where it is expected to end, and what counts as a plateau. Then launch 6,000,000 steps with everything else identical to Run 1, using the first 2,000,000 as a replication check against Run 1's curve.
+
+**Aspiration:**
+
+**Close the evaluation gap, carried from yesterday.** Build the sweep around `scripts/play_checkpoint.py` and run it on Run 1 across 11 checkpoints, every 200,000 steps, 100 episodes each, about 50 minutes, writing one row per checkpoint. That spacing matches the trailing mean table in `docs/runs/run-01.md` so the evaluation and training curves line up without interpolation, which is what replaces training reward standing in for the bar. Start it on the card while writing the instrumentation so the two overlap rather than the sweep adding its full runtime before Run 2, and let it finish before the warmup pass so that rate stays clean. Not on the CPU, since ALE emulates there and the CPU is already the bottleneck, and not alongside Run 2. If the sweep is not running within an hour of starting on it, drop it and move to the instrumentation, since the floor needs the rest of the day.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
+
+---
