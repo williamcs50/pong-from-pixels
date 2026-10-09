@@ -59,15 +59,24 @@ python src/random_agent.py
 # a short run that exercises the whole pipeline, finishes in seconds
 python scripts/tiny_train.py
 
+# a warmup pass at real settings, long enough to measure the rate
+python scripts/real_train.py --total-steps 120000 --output-dir <path>/run-00-warmup
+
 # the real run, 2,000,000 steps
-python scripts/real_train.py
+python scripts/real_train.py --output-dir <path>/run-01
 ```
 
-Both call the same `train()`, so the short run says something about the real one.
-`real_train.py` also takes `--total-steps` for a warmup pass at real settings, and
-`--output-dir` to choose where the run writes. It refuses to start on a dirty
-working tree, since the commit hash it records would not then describe the code
-that ran.
+Both scripts call the same `train()`, so the short run says something about the real
+one, and the warmup pass is the real run with one number changed.
+
+Pass `--output-dir` rather than letting the numbering pick, because the GPU logger
+in [docs/launch_checklist.md](docs/launch_checklist.md) needs the path before the
+run starts. Without the flag the directory is the next `run-NN` under `RUNS_ROOT`,
+which you only learn from the startup block once the run is already going.
+
+`train()` refuses to start on a dirty working tree, since the commit hash it records
+would not then describe the code that ran. `--allow-dirty` overrides that for
+throwaway runs and is recorded in `run_config.json` when used.
 
 Each run writes its own directory outside the repository: `episodes.csv` with one
 row per episode, `run_config.json` with the resolved config and the commit, and
