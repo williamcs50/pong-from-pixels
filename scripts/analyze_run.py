@@ -86,6 +86,13 @@ def report_episodes(path):
 
 
 def report_gpu(path):
+    # Absent whenever the nvidia-smi logger was not started, which is normal for a
+    # warmup measuring throughput rather than temperature.
+    if not os.path.exists(path):
+        print()
+        print("no gpu_log.csv, the logger was not running for this run")
+        return
+
     rows = [r for r in csv.reader(open(path)) if r][1:]
 
     if not rows:
