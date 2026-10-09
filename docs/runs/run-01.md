@@ -1,10 +1,10 @@
 # Run 1
 
 The first real training run. Every figure here except the checkpoint count and size
-comes from the run's own `run_config.json`, `episodes.csv` and `gpu_log.csv`, which
-are committed in [run-01/](run-01/) alongside the warmup pass's own three files in
-[run-00-warmup/](run-00-warmup/), so the numbers can be checked rather than taken on
-trust. The command that produces them is at the bottom. The checkpoints themselves
+comes from the run's own `run_config.json`, `episodes.csv`, `gpu_log.csv` and the two
+evaluation files, all committed in [run-01/](run-01/) alongside the warmup pass's
+three files in [run-00-warmup/](run-00-warmup/), so the numbers can be checked rather
+than taken on trust. The commands that produce them are at the bottom. The checkpoints themselves
 are not committed at 1.02 GB, so their count and size are measured on disk instead.
 
 **Output:** `run-01` under `RUNS_ROOT`, which [src/run_paths.py](../../src/run_paths.py)
@@ -98,6 +98,67 @@ would tend to flatten the curve rather than leave it climbing.
 
 ---
 
+## Evaluation
+
+The figures above are training episodes at epsilon 0.01. The bar is defined over
+100 evaluation episodes, so every checkpoint was scored separately at epsilon 0.05,
+in [run-01/eval.csv](run-01/eval.csv).
+
+| Step | Eval mean | Training trailing 100 | Eval minus training |
+|---|---|---|---|
+| 0 | -20.98 | | |
+| 200,000 | -21.00 | -20.55 | -0.45 |
+| 400,000 | -20.75 | -20.77 | +0.02 |
+| 600,000 | -20.96 | -20.40 | -0.56 |
+| 800,000 | -18.47 | -20.15 | +1.68 |
+| 1,000,000 | -10.69 | -15.69 | +5.00 |
+| 1,200,000 | -11.79 | -10.17 | -1.62 |
+| 1,400,000 | -7.79 | -6.96 | -0.83 |
+| 1,600,000 | -1.99 | -4.94 | +2.95 |
+| 1,800,000 | **-1.63** | -2.67 | +1.04 |
+| 2,000,000 | -4.41 | -0.11 | -4.30 |
+
+**No checkpoint meets the bar.** The best is -1.63 at step 1,800,000.
+
+**The best checkpoint is not the last one.** 1,800,000 beats 2,000,000 by 2.78
+points, so the policy got worse over the final 200,000 steps. Both were scored again
+at seed 1 on independent episodes, in
+[run-01/eval_seed1.csv](run-01/eval_seed1.csv), and the result held:
+
+| Step | Seed 0 | Seed 1 | Std at seed 1 |
+|---|---|---|---|
+| 0 | -20.98 | -20.97 | 0.17 |
+| 1,800,000 | -1.63 | -1.89 | 4.43 |
+| 2,000,000 | -4.41 | -4.54 | 3.16 |
+
+With 100 episodes those standard deviations give standard errors of 0.44 and 0.32,
+so the 2.65 point gap at seed 1 is about 5 combined standard errors. The means also
+moved by only 0.26 and 0.13 between seeds, well inside those errors. So this is
+checkpoint oscillation rather than evaluation noise, and 1,800,000 is genuinely the
+better policy rather than the luckier measurement.
+
+**2,000,000 is both worse and less variable**, standard deviation 3.16 against
+4.43. It loses more consistently, where 1,800,000 sometimes wins by more.
+
+**The two curves cross, and both lag effects show up.** Evaluation runs above
+training from 800,000 to 1,600,000, peaking at 5.00 points at 1,000,000, then falls
+4.30 below it at the end. The training trailing mean covers roughly the last
+400,000 steps, so it averages a changing policy rather than measuring the final
+one: while the policy is improving that understates it, and at the end, where the
+policy regressed, it overstates it. The extra exploration at epsilon 0.05 pushes
+evaluation down throughout.
+
+That is why training reported -0.11 at the final step while the final policy scores
+-4.41. The number I quoted as Run 1's result was never a measurement of the policy
+the run finished with.
+
+**The eleven rows in `eval.csv` predate the provenance work**, so they carry no
+commit hash, no standard deviation, and no seed column. They were produced at seed
+0. The seed 1 rows have a full sidecar in
+[run-01/eval_seed1_config.json](run-01/eval_seed1_config.json).
+
+---
+
 ## Throughput and hardware
 
 | | |
@@ -128,14 +189,23 @@ nowhere near reached.
 
 ## Reproducing the figures
 
-Every number above comes out of one command, run from the repository root:
+Every training and hardware number above comes out of one command, run from the
+repository root:
 
 ```powershell
 python scripts/analyze_run.py docs/runs/run-01
 ```
 
+The evaluation numbers are read straight out of [run-01/eval.csv](run-01/eval.csv)
+and [run-01/eval_seed1.csv](run-01/eval_seed1.csv). Reproducing them from the
+checkpoints, which are not committed, takes about 50 minutes for the full sweep:
+
+```powershell
+python scripts/sweep_eval.py <run_dir> --every 200000
+```
+
 The warmup pass's own figures, including the 252.1 steps per second the projection
-was built on, come from the same command pointed at the other directory:
+was built on, come from the analyzer pointed at the other directory:
 
 ```powershell
 python scripts/analyze_run.py docs/runs/run-00-warmup

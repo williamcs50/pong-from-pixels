@@ -31,6 +31,8 @@ REAL_CONFIG = {
     "repeat_action_probability": 0.0,  # v5 defaults this to 0.25
     "seed": 0,  # not bit reproducible on GPU, cuDNN picks nondeterministic kernels
     "checkpoint_every_steps": 50_000,  # 40 checkpoints at 27 MB, about 1.1 GB
+    "metrics_every_steps": 10_000,  # 600 rows over a 6M step run
+    "probe_path": None,  # generated from PROBE_SEED and saved into the run directory
 }
 
 

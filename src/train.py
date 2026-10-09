@@ -15,6 +15,7 @@ import torch.optim as optim
 from src.action_selector import select_action
 from src.checkpoint import save_checkpoint
 from src.preprocess import Preprocessor
+from src.probe import load_or_make_probe
 from src.git_info import git_state
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
@@ -54,6 +55,27 @@ def train_step(q_network, target_network, optimizer, batch, gamma) -> float:
     return loss.item()
 
 
+def probe_metrics(q_network, probe_tensor) -> dict:
+    # Levels, not deltas. Drift against step 0, the previous row, or another run is
+    # all derivable afterwards, and computing one of them here picks the baseline
+    # for every later reader.
+    with torch.no_grad():
+        q_values = q_network(probe_tensor)
+
+    best = q_values.max(dim=1).values
+    spread = best - q_values.min(dim=1).values
+    argmax_counts = torch.bincount(q_values.argmax(dim=1), minlength=q_values.shape[1])
+
+    return {
+        "q_max_mean": best.mean().item(),
+        "q_spread_mean": spread.mean().item(),
+        "q_action_means": q_values.mean(dim=0).tolist(),
+        # Six counts rather than a single concentration number, so the modal action,
+        # its share, and the three movement pairs are all recoverable from the row.
+        "argmax_counts": argmax_counts.tolist(),
+    }
+
+
 def train(
     *,
     total_steps,
@@ -71,6 +93,8 @@ def train(
     seed,
     output_dir,
     checkpoint_every_steps,
+    metrics_every_steps,
+    probe_path,
     allow_dirty,
 ) -> None:
     if warmup_steps < batch_size:
@@ -90,6 +114,9 @@ def train(
 
     if checkpoint_every_steps <= 0:
         raise ValueError("checkpoint_every_steps must be > 0")
+
+    if metrics_every_steps <= 0:
+        raise ValueError("metrics_every_steps must be > 0")
 
     # Refused here rather than warned about, because a dirty tree makes git_commit
     # a lie and nothing about a finished run can fix that retroactively.
@@ -158,14 +185,19 @@ def train(
     # The output size follows the env, so a mismatch here means the two have
     # come apart. Checked on a real forward pass, not on the layer definition.
     with torch.no_grad():
-        probe = q_network(transform(stacked, device))
+        output_check = q_network(transform(stacked, device))
 
-    assert probe.shape[-1] == n_actions, (
-        f"Network outputs {probe.shape[-1]} actions, env has {n_actions}"
+    assert output_check.shape[-1] == n_actions, (
+        f"Network outputs {output_check.shape[-1]} actions, env has {n_actions}"
     )
-    print(f"Network output size: {probe.shape[-1]}")
+    print(f"Network output size: {output_check.shape[-1]}")
 
     # The output directory is chosen at launch, not committed, so the commit hash
+    probe, probe_sha = load_or_make_probe(probe_path, os.path.join(output_dir, "probe.npy"))
+    probe_tensor = transform(probe, device)
+    print(f"Probe: {len(probe)} states, sha256 {probe_sha[:12]}"
+          f"{' loaded from ' + probe_path if probe_path else ', generated and saved'}")
+
     # alone does not say what ran where. This makes each run self describing.
     run_config = {
         "total_steps": total_steps,
@@ -183,6 +215,10 @@ def train(
         "seed": seed,
         "output_dir": os.path.abspath(output_dir),
         "checkpoint_every_steps": checkpoint_every_steps,
+        "metrics_every_steps": metrics_every_steps,
+        "probe_path": probe_path,
+        "probe_states": len(probe),
+        "probe_sha256": probe_sha,
         "allow_dirty": allow_dirty,
         "git_commit": git["git_commit"],
         "git_dirty": git["git_dirty"],
@@ -235,6 +271,48 @@ def train(
         "wall_clock_s",
     ])
     log_file.flush()
+
+    # A second file on a fixed step cadence. The episode log thins out as rallies
+    # lengthen, Run 1 going from a row every 909 steps to every 4,139, so anything
+    # plotted against step wants even spacing.
+    metrics_file = open(os.path.join(output_dir, "metrics.csv"), "w", newline="")
+    metrics_writer = csv.writer(metrics_file)
+    metrics_writer.writerow(
+        ["env_step", "gradient_updates", "epsilon", "buffer_size",
+         "q_max_mean", "q_spread_mean"]
+        + [f"q_action_{i}_mean" for i in range(n_actions)]
+        + [f"argmax_count_{i}" for i in range(n_actions)]
+        + ["batch_reward_fraction", "batch_done_fraction", "batches_in_window"]
+    )
+
+    # Reward and done counts over the sampled batches since the last row, so the
+    # fractions describe what the updates in that window actually saw.
+    window_reward_count = 0
+    window_done_count = 0
+    window_batches = 0
+
+    def write_metrics_row(at_step, epsilon_now):
+        nonlocal window_reward_count, window_done_count, window_batches
+        stats = probe_metrics(q_network, probe_tensor)
+        sampled = window_batches * batch_size
+
+        metrics_writer.writerow(
+            [at_step, gradient_updates, f"{epsilon_now:.6f}", len(replay_buffer),
+             f"{stats['q_max_mean']:.6f}", f"{stats['q_spread_mean']:.6f}"]
+            + [f"{v:.6f}" for v in stats["q_action_means"]]
+            + stats["argmax_counts"]
+            + [f"{window_reward_count / sampled:.6f}" if sampled else "",
+               f"{window_done_count / sampled:.6f}" if sampled else "",
+               window_batches]
+        )
+        metrics_file.flush()
+        window_reward_count = 0
+        window_done_count = 0
+        window_batches = 0
+
+    # Before any update, for the same reason as step_00000000.pt: the untrained
+    # baseline is what every later row is compared against.
+    write_metrics_row(0, epsilon_start)
 
     for step in range(total_steps):
         # Linear epsilon decay
@@ -305,6 +383,13 @@ def train(
         if (env_step >= warmup_steps and env_step % train_every == 0):
             batch = replay_buffer.sample(batch_size)
 
+            # Counted on the batch the update actually trained on. In Pong reward is
+            # zero except when a point is scored, so this is how much signal an
+            # update sees, and it falls as rallies lengthen.
+            window_reward_count += int(np.count_nonzero(batch[2]))
+            window_done_count += int(np.count_nonzero(batch[4]))
+            window_batches += 1
+
             loss = train_step(
                 q_network,
                 target_network,
@@ -330,6 +415,9 @@ def train(
                     q_network.state_dict()
                 )
                 print(f"target synced at update {gradient_updates}")
+
+        if env_step % metrics_every_steps == 0:
+            write_metrics_row(env_step, epsilon)
 
         # Counted in env steps, unlike the target sync above.
         if env_step % checkpoint_every_steps == 0:
@@ -358,6 +446,7 @@ def train(
         print(f"checkpoint written: {os.path.basename(checkpoint_path(total_steps))}")
 
     log_file.close()
+    metrics_file.close()
 
     # Printed even if no episode finished, so a silent run can't pass for a clean one.
     print(f"done: {total_steps} steps, {episodes_finished} episodes finished, "

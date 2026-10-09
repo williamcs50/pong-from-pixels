@@ -1,0 +1,35 @@
+[
+  {
+    "run_dir": "C:\\Users\\Willi\\pong-runs\\run-01",
+    "every": 1800000,
+    "episodes": 100,
+    "epsilon": 0.05,
+    "seed": 1,
+    "repeat_action_probability": 0.0,
+    "steps_to_evaluate": [
+      0,
+      1800000
+    ],
+    "device": "cuda",
+    "git_commit": "c6fad2817d702c8efb2cdac7ecd83e97253edf5a",
+    "git_dirty": false,
+    "git_status": "",
+    "started_at": "2026-10-09T15:13:36"
+  },
+  {
+    "run_dir": "C:\\Users\\Willi\\pong-runs\\run-01",
+    "every": 2000000,
+    "episodes": 100,
+    "epsilon": 0.05,
+    "seed": 1,
+    "repeat_action_probability": 0.0,
+    "steps_to_evaluate": [
+      2000000
+    ],
+    "device": "cuda",
+    "git_commit": "c6fad2817d702c8efb2cdac7ecd83e97253edf5a",
+    "git_dirty": true,
+    "git_status": "M scripts/real_train.py\n M scripts/tiny_train.py\n M src/train.py\n?? src/probe.py",
+    "started_at": "2026-10-09T15:24:25"
+  }
+]
