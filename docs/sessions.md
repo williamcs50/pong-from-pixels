@@ -552,8 +552,37 @@ Floor 1 and Floor 2 are met. Floor 3 moves to tomorrow.
 
 ## What landed today
 
+Aspiration closed. Floor not met: Run 2 was held at the 5:30 cutoff on purpose rather than launched in a rush.
+
+- Built the evaluation sweep. `src/evaluate.py` scores one checkpoint, `scripts/sweep_eval.py` loops over a run writing a row each, and `scripts/play_checkpoint.py` became a thin CLI over the same `evaluate()`. One evaluation path, three entry points, so the sweep and the single checkpoint view cannot drift.
+- Ran it on Run 1, 11 checkpoints at 100 episodes each, 50.3 minutes against the 50 I estimated. No checkpoint meets the bar. The best is -1.63 at step 1,800,000 and the final checkpoint at 2,000,000 is -4.41.
+- Scored 1,800,000 and 2,000,000 again at seed 1 on independent episodes. They came back -1.89 and -4.54, so the 2.7 point regression replicates at about 5 combined standard errors and the means moved only 0.26 and 0.13 between seeds.
+- Added `std_reward`, `seed` and `elapsed_s` to the sweep's rows, a header guard that refuses to append to a file whose columns do not match, and an `eval_config.json` sidecar recording the commit, dirty flag and settings per invocation. Extracted `src/git_info.py` out of `train.py`, since two callers needed it.
+- Built the instrumentation. `src/probe.py` makes 500 states from a fixed `PROBE_SEED` of 7, independent of the run seed so two runs measure the same states, with its sha256 in `run_config.json` and a `--probe` flag to reuse an earlier run's file.
+- `metrics.csv` writes 21 columns every 10,000 env steps with a row at step 0 before any update. Fourteen are Q figures: mean max Q, mean spread, six per action means and six argmax counts. The rest are epsilon, buffer size, the two replay fractions and the batch count behind them.
+- Verified on a tiny run, then measured the cost with a 120,000 step warmup at Run 2 settings. Post warmup rate 256.1 steps per second against 252.1 without instrumentation, so the cost is below what this measurement resolves. 6,000,000 steps projects to 6.47 hours.
+- The replay fraction landed where the morning's arithmetic said. Measured 0.0244 of transitions, which is 0.78 per batch of 32, against 0.77 derived from Run 1's first 100 episodes before any of this existed.
+- `scripts/analyze_run.py`: relabelled the update count as being from the last logged episode, since it read as the run total and disagreed with the `done:` line, and guarded a missing `gpu_log.csv` rather than crashing on it.
+- `docs/runs/run-01.md` gained an Evaluation section with both seeds, the committed `eval.csv` and `eval_seed1.csv`, and the correction that the -0.11 I reported as Run 1's result was never a measurement of the policy the run finished with.
+
 ## What's open (carrying forward)
 
+- **The floor.** Run 2 is not launched. Everything it needs is done except the pre registration, and it goes tomorrow morning.
+- Run 2's pre registration, now seven items rather than three: the crossing, the final value, the plateau definition, the replication band against Run 1's first 2,000,000, whether any checkpoint clears the bar, the replay fraction early and late, and when the argmax counts stop moving as a block.
+- The README does not mention `sweep_eval.py`.
+- The probe's limitation, that a random policy visits early game states rather than where a trained agent lives, is only in a code comment and belongs in `run-02.md`.
+- No test covers the sweep, `git_info.py`, the instrumentation, logging or checkpointing. That is five things verified by hand.
+- The Task Manager reading of buffer RAM against 5.26 GiB.
+- Carried unchanged: the driven UP and DOWN rollout in `scripts/visual_check.py`, and which direction `RIGHT` moves the paddle.
+
 ## Anything surprising or worth flagging
+
+- The best checkpoint is not the last one, and it replicates at two seeds. Training reported -0.11 at the final step while the final policy scores -4.41, because the trailing mean averages roughly the last 400,000 steps of a changing policy. When the policy is improving that understates it, and at the end, where it regressed, it overstates it.
+- The Q spread collapses rather than growing. 0.057 at initialisation, then 0.006 by step 60,000 after 2,501 updates. Early training makes the network less able to distinguish between actions than random weights did.
+- The argmax moves as a block. All 500 probe states share one action and that action jumps between rows, NOOP then FIRE then RIGHTFIRE then LEFT. A single concentration number would have read 1.00 on every row and hidden all of it, which is why the six counts replaced it.
+- `metrics.csv` rows from step 0 to 40,000 are byte identical. No update happens before 50,000, so that proves the probe is fixed rather than resampled.
+- Episode boundaries match across both warmups through step 49,987 and diverge from episode 56, so the instrumentation does not consume the action RNG and divergence begins exactly where gradient updates begin.
+- The Oct 6 plateau definition does not mean one thing. 200 episodes was 182,000 steps at the start of Run 1 and 828,000 at the end, so the same words are a four times looser test at the end than at the start.
+- I predicted the instrumentation would cost under 1 percent and gave a range of 249 to 252. The cost was under 1 percent but the rate came back 256.1, because I treated 252.1 as exact when it moves a couple of percent between runs.
 
 ---
