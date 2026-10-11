@@ -20,6 +20,28 @@ only, so everything the warmup verified applies to this run unchanged. Check wit
 
 ---
 
+## Pre registration
+
+Quoted verbatim from the 2026-10-06 entry in [sessions.md](../sessions.md), commit
+`03b99133acc6ef509f60952baf9b229f24ee224c` of Oct 6 at 18:10, and copied into this
+file on Oct 10. That commit is two days before Run 1 launched at Oct 8 13:55, which
+is what proves the prediction predates the data.
+
+Three items, as written then rather than as I would write them now:
+
+> Rewrote the pre registered prediction so it can fail. A plateau is the trailing
+> mean over the last 100 episodes moving less than 1.0 across 200 episodes. It
+> should cross 0 before step 1.2M, and still being below 0 at 1.2M means the
+> schedule is insufficient.
+
+| # | Prediction | Outcome |
+|---|---|---|
+| 1 | The trailing 100 mean crosses 0 before step 1,200,000 | Failed. It was -10.17 at 1,200,000 and never crossed at all, ending at -0.11. |
+| 2 | A plateau is the trailing mean moving less than 1.0 across 200 episodes | No plateau. It gained 2.56 points over the last 200,000 steps with no flattening. |
+| 3 | Still being below 0 at 1,200,000 means the schedule is insufficient | Triggered, which is what sets Run 2's step count. |
+
+---
+
 ## Config
 
 | | |
