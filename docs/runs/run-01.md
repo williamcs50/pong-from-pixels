@@ -200,7 +200,7 @@ commit hash, no standard deviation, and no seed column. They were produced at se
 **The GPU was not the bottleneck.** 42 percent peak utilization and 51 W on a card
 rated near 160 means the limit is the CPU side: one Pong instance, frame
 preprocessing, and the per step Python loop. The fill phase before training began
-ran at 809 steps per second with no GPU work in it, against 252 once updates
+ran at 837.3 steps per second with no GPU work in it, against 248.9 once updates
 started.
 
 The warmup pass understated the load, peaking at 52 °C, 1,290 MHz and 30 W,
