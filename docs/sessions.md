@@ -593,7 +593,7 @@ Aspiration closed. Floor not met: Run 2 was held at the 5:30 cutoff on purpose r
 
 **Floor:**
 
-1. **Copy Run 2's logs into the repo:** the eight files from `~\pong-runs\run-02` into `docs/runs/run-02/`, leaving out `probe.npy` at 13.8 MB since `run_config.json` records its sha256 and it regenerates from `PROBE_SEED`, and leaving the 121 checkpoints at 3.03 GB uncommitted as Run 1 did. The run data currently exists in one place, outside git and outside the OneDrive sync root.
+1. **Copy Run 2's logs into the repo:** the eight files from `~\pong-runs\run-02` into `docs/runs/run-02/`, leaving out `probe.npy` at 13.5 MB since `run_config.json` records its sha256 and it regenerates from `PROBE_SEED`, and leaving the 121 checkpoints at 3.03 GB uncommitted as Run 1 did. The run data currently exists in one place, outside git and outside the OneDrive sync root.
 2. **Write run-02.md's Config and Results:** transcribe Config from `run_config.json`, then score all three pre registered predictions against both evaluation sweeps. Record the limitations alongside them: the training run is a single seed even though the evaluation replicates at two, and the probe samples a random policy's early game states rather than where a trained agent lives.
 3. **Establish what the six actions do:** drive each one in `scripts/visual_check.py` and record the agent paddle's row movement in the columns `PADDLE_COLUMNS` already locates, so the Results section can describe the argmax distribution as paddle direction rather than as action indices. That closes the driven rollout carried since Oct 3.
 
