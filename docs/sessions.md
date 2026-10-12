@@ -36,7 +36,7 @@
 
 ## Anything surprising or worth flagging
 
-- I did not realize that pip install torch only installs a CPU-only build by default. There is no warning, and the GPU never gets used even if the hardware is ready. PyTorch has to be installed from its own index to get the CUDA build.
+- I did not realize that pip install torch only installs a CPU only build by default. There is no warning, and the GPU never gets used even if the hardware is ready. PyTorch has to be installed from its own index to get the CUDA build.
 
 ---
 
@@ -71,9 +71,9 @@
 
 **Date:** 2026-07-04
 
-**Floor:** `src/replay_buffer.py` hand-built and verified in isolation. Push transitions, sample batches, assert shapes, and confirm circular overwrite when the buffer fills. Committed.
+**Floor:** `src/replay_buffer.py` hand built and verified in isolation. Push transitions, sample batches, assert shapes, and confirm circular overwrite when the buffer fills. Committed.
 
-**Aspiration:** All of that, plus the Q-network and target network written and verified with a GPU forward pass. A dummy batch through CUDA, output shape confirmed at (B, n_actions), `loss.backward()` runs without error, and target weights decoupled and syncable. The HWC to NCHW transpose and /255 normalization also land here.
+**Aspiration:** All of that, plus the Q network and target network written and verified with a GPU forward pass. A dummy batch through CUDA, output shape confirmed at (B, n_actions), `loss.backward()` runs without error, and target weights decoupled and syncable. The HWC to NCHW transpose and /255 normalization also land here.
 
 ---
 
@@ -84,7 +84,7 @@
 
 ## What's open (carrying forward)
 
-- Floor was met. Aspiration not reached. Q-network and target network deferred to next session.
+- Floor was met. Aspiration not reached. Q network and target network deferred to next session.
 
 ## Anything surprising or worth flagging
 
@@ -92,27 +92,27 @@
 
 ---
 
-# Saturday: Q-Network
+# Saturday: Q Network
 
 **Date:** 2026-07-11
 
-**Floor:** The day counts as a win if the Q-network and target network are both hand-built and verified in isolation, then committed. That means a dummy batch of shape (B, 4, 84, 84) on CUDA produces output of shape (B, n_actions), lands on the GPU, runs `loss.backward()` cleanly, and leaves the target network weights unchanged after an optimizer step on the Q-network until they are synced. The transpose and division by 255 also live in one consistent place on every path into the network.
+**Floor:** The day counts as a win if the Q network and target network are both hand built and verified in isolation, then committed. That means a dummy batch of shape (B, 4, 84, 84) on CUDA produces output of shape (B, n_actions), lands on the GPU, runs `loss.backward()` cleanly, and leaves the target network weights unchanged after an optimizer step on the Q network until they are synced. The transpose and division by 255 also live in one consistent place on every path into the network.
 
-**Aspiration:** If time allows, the stretch goal is to build and verify an epsilon-greedy action selector. With epsilon = 1, it should behave like uniform random selection, and with epsilon = 0, it should behave like deterministic argmax selection. That would exercise the full action path end to end: stacked frame, transform, network, and action.
+**Aspiration:** If time allows, the stretch goal is to build and verify an epsilon greedy action selector. With epsilon = 1, it should behave like uniform random selection, and with epsilon = 0, it should behave like deterministic argmax selection. That would exercise the full action path end to end: stacked frame, transform, network, and action.
 
 ---
 
 ## What landed today
 
-- The Q-network was designed, built, and tested. Its shape, device placement, gradients, and output sanity were all confirmed. The transform site, activation placement, and dynamic action-count handling were all deliberate choices, and each one is easy to defend.
+- The Q network was designed, built, and tested. Its shape, device placement, gradients, and output sanity were all confirmed. The transform site, activation placement, and dynamic action count handling were all deliberate choices, and each one is easy to defend.
 
 ## What's open (carrying forward)
 
-- The target network and action selector are still open. Both are small implementation steps, and the target network is basically a second QNetwork instance plus a simple weight-copy routine.
+- The target network and action selector are still open. Both are small implementation steps, and the target network is basically a second QNetwork instance plus a simple weight copy routine.
 
 ## Anything surprising or worth flagging
 
-- The main surprise was how little code was needed to verify the Q-network end to end once the architecture and tests were in place.
+- The main surprise was how little code was needed to verify the Q network end to end once the architecture and tests were in place.
 - I did not fully account for the target network until the end, so I deferred it to the next session.
 
 ---
@@ -121,20 +121,20 @@
 
 **Date:** 2026-07-25
 
-**Floor:** The day counts as a win if the target network is hand-built and verified: snapshot its weights, take an optimizer step on the Q-network, assert the target is unchanged, sync with `load_state_dict`, assert they now match, and confirm target params are never held by the optimizer. The action selector should also be built and verified: epsilon = 1 behaves like uniform random selection, epsilon = 0 behaves like deterministic argmax, and the forward pass runs under `no_grad`.
+**Floor:** The day counts as a win if the target network is hand built and verified: snapshot its weights, take an optimizer step on the Q network, assert the target is unchanged, sync with `load_state_dict`, assert they now match, and confirm target params are never held by the optimizer. The action selector should also be built and verified: epsilon = 1 behaves like uniform random selection, epsilon = 0 behaves like deterministic argmax, and the forward pass runs under `no_grad`.
 
-**Aspiration:** If time allows, the stretch goal is to close the seam between preprocessing and the network: one transform function, shared by the training path and the action-selection path, that reconciles the preprocessor's normalized, channel-first output with the replay buffer's raw uint8 storage and the network's expected input. Then run one integration smoke test that exercises the full pipeline end to end. `env.reset()` through the preprocessor, through that shared transform, through the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the same transform and network again. No shape, dtype, or device errors anywhere in that chain would count as the stretch goal met.
+**Aspiration:** If time allows, the stretch goal is to close the seam between preprocessing and the network: one transform function, shared by the training path and the action selection path, that reconciles the preprocessor's normalized, channel first output with the replay buffer's raw uint8 storage and the network's expected input. Then run one integration smoke test that exercises the full pipeline end to end. `env.reset()` through the preprocessor, through that shared transform, through the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the same transform and network again. No shape, dtype, or device errors anywhere in that chain would count as the stretch goal met.
 
 ---
 
 ## What landed today
 
-- The target network was designed, built, and tested. Its isolation from the optimizer, its frozen weights through a gradient step on the online network, and its equality with the online network after a sync were all confirmed. Hard-copy sync via `load_state_dict` was chosen over Polyak averaging. It matches the original Atari DQN paper, and it's simpler to test: a discrete frozen-then-synced event instead of a continuous per-step drift.
+- The target network was designed, built, and tested. Its isolation from the optimizer, its frozen weights through a gradient step on the online network, and its equality with the online network after a sync were all confirmed. Hard copy sync via `load_state_dict` was chosen over Polyak averaging. It matches the original Atari DQN paper, and it's simpler to test: a discrete frozen then synced event instead of a continuous per step drift.
 
 ## What's open (carrying forward)
 
-- The action selector is still open. It gets its own file, `src/action_selector.py`, and its own test. Q-values and epsilon in, an integer action out. Epsilon = 1 should behave like uniform random selection, epsilon = 0 like deterministic argmax, and the forward pass through the network should run under `no_grad`.
-- The shared transform function is still open: one function, called by both the training path and the action-selection path, that reconciles the preprocessor's normalized `(4, 84, 84)` float32 output with the replay buffer's raw `(84, 84, 4)` uint8 storage and converts it into what the network expects. This doesn't exist on either path yet, it isn't a matter of deduping a copy that's already there.
+- The action selector is still open. It gets its own file, `src/action_selector.py`, and its own test. Q values and epsilon in, an integer action out. Epsilon = 1 should behave like uniform random selection, epsilon = 0 like deterministic argmax, and the forward pass through the network should run under `no_grad`.
+- The shared transform function is still open: one function, called by both the training path and the action selection path, that reconciles the preprocessor's normalized `(4, 84, 84)` float32 output with the replay buffer's raw `(84, 84, 4)` uint8 storage and converts it into what the network expects. This doesn't exist on either path yet, it isn't a matter of deduping a copy that's already there.
 - The integration smoke test is still open: `env.reset()` through the preprocessor, the shared transform, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the same transform and network again.
 
 ## Anything surprising or worth flagging
@@ -147,26 +147,26 @@
 
 **Date:** 2026-08-08
 
-**Floor:** The action selector hand-built and verified. `src/action_selector.py` written, kept separate from the network so it only takes in Q-values and epsilon, and `tests/test_action_selector.py` covering determinism at epsilon 0, uniform exploration at epsilon 1, correct return type, and valid action range. Committed.
+**Floor:** The action selector hand built and verified. `src/action_selector.py` written, kept separate from the network so it only takes in Q values and epsilon, and `tests/test_action_selector.py` covering determinism at epsilon 0, uniform exploration at epsilon 1, correct return type, and valid action range. Committed.
 
-**Aspiration:** If time allows, the stretch goal is the transform layer. Two path-specific functions, one for the training path and one for the action selection path, sharing a contract rather than code, that reconcile the preprocessor's normalized 4 x 84 x 84 float32 output with the replay buffer's raw 84 x 84 x 4 uint8 storage and convert it into what the network expects. Neither exists on either path yet, so it is not a matter of combining code that already exists in two places, it is new code. If that lands, the next stretch goal is one integration smoke test that runs the whole pipeline end to end. `env.reset()` through the preprocessor, the transform, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the transform layer and the network again, with no shape, dtype, or device errors anywhere in that chain.
+**Aspiration:** If time allows, the stretch goal is the transform layer. Two path specific functions, one for the training path and one for the action selection path, sharing a contract rather than code, that reconcile the preprocessor's normalized 4 x 84 x 84 float32 output with the replay buffer's raw 84 x 84 x 4 uint8 storage and convert it into what the network expects. Neither exists on either path yet, so it is not a matter of combining code that already exists in two places, it is new code. If that lands, the next stretch goal is one integration smoke test that runs the whole pipeline end to end. `env.reset()` through the preprocessor, the transform, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the transform layer and the network again, with no shape, dtype, or device errors anywhere in that chain.
 
 ---
 
 ## What landed today
 
-- `src/action_selector.py` is built. It takes Q-values, epsilon, and the number of actions, and returns a plain Python int, either the argmax action or a random one. I kept it separate from the network on purpose, so whatever calls the network still owns the `no_grad` context, not the selector.
+- `src/action_selector.py` is built. It takes Q values, epsilon, and the number of actions, and returns a plain Python int, either the argmax action or a random one. I kept it separate from the network on purpose, so whatever calls the network still owns the `no_grad` context, not the selector.
 - `tests/test_action_selector.py` passes everything I wanted covered. Epsilon 0 always picks the same argmax action, epsilon 1 explores every action roughly evenly, the return type is a real Python int on both branches, and the action always falls inside the valid range. I caught a real bug while writing these tests, the random branch was returning a numpy int instead of a plain Python int.
 - While tracing this, I noticed `architecture.md` had the preprocessor's output and the network's input written down wrong. It described them as 84 x 84 x 4 in uint8, which is actually the replay buffer's storage shape, not what the preprocessor or network use. The real shape is 4 x 84 x 84 in float32. I fixed `architecture.md`.
 
 ## What's open (carrying forward)
 
-- The transform layer is still open. Two path-specific functions, one for the training path and one for the action selection path, sharing a contract rather than code, that reconcile the preprocessor's normalized 4 x 84 x 84 float32 output with the replay buffer's raw 84 x 84 x 4 uint8 storage and convert it into what the network expects. Neither exists on either path yet, it is not a matter of combining code that already exists in two places.
+- The transform layer is still open. Two path specific functions, one for the training path and one for the action selection path, sharing a contract rather than code, that reconcile the preprocessor's normalized 4 x 84 x 84 float32 output with the replay buffer's raw 84 x 84 x 4 uint8 storage and convert it into what the network expects. Neither exists on either path yet, it is not a matter of combining code that already exists in two places.
 - The integration smoke test is still open. `env.reset()` through the preprocessor, the transform layer, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the transform layer and the network again.
 
 ## Anything surprising or worth flagging
 
-- Looking closely at push in `replay_buffer.py`, I found there is no real conversion logic there at all, just a plain assignment. Right now that fails loudly because the shapes do not match. But if I only fixed the shape and left the scaling alone, it would fail silently instead, since a shape-only fix would not correctly map [0, 1] floats into [0, 255] uint8 storage. Both issues come from the same place. I assumed a conversion existed between the preprocessor and the buffer, and it turns out I never actually wrote one.
+- Looking closely at push in `replay_buffer.py`, I found there is no real conversion logic there at all, just a plain assignment. Right now that fails loudly because the shapes do not match. But if I only fixed the shape and left the scaling alone, it would fail silently instead, since a shape only fix would not correctly map [0, 1] floats into [0, 255] uint8 storage. Both issues come from the same place. I assumed a conversion existed between the preprocessor and the buffer, and it turns out I never actually wrote one.
 
 ---
 
@@ -209,7 +209,7 @@
 
 **Date:** 2026-08-22
 
-**Floor:** `src/preprocess.py`: `preprocess()` stops normalizing, returns uint8; `_get_stacked()` stacks on the last axis; output `(84, 84, 4)` uint8. Six of seven `test_preprocess.py` tests updated for the new dtype/shape/axis (`test_preprocess_shape` is the one that doesn't move). The shared transform function: uint8 HWC in, cast to float32, divide by 255, transpose to NCHW. The isolated value test on the transform (known input, exact expected output). The round trip test: frame through `preprocess`, through `buffer.push`/`buffer.sample`, through the transform, checked against transforming the original frame directly. `architecture.md` corrected again to say uint8 HWC. All committed and pushed.
+**Floor:** `src/preprocess.py`: `preprocess()` stops normalizing and returns uint8. `_get_stacked()` stacks on the last axis. Output `(84, 84, 4)` uint8. Six of seven `test_preprocess.py` tests updated for the new dtype/shape/axis (`test_preprocess_shape` is the one that doesn't move). The shared transform function: uint8 HWC in, cast to float32, divide by 255, transpose to NCHW. The isolated value test on the transform (known input, exact expected output). The round trip test: frame through `preprocess`, through `buffer.push`/`buffer.sample`, through the transform, checked against transforming the original frame directly. `architecture.md` corrected again to say uint8 HWC. All committed and pushed.
 
 **Aspiration:** The full end to end smoke test, two separate paths, both with no shape, dtype, or device errors. Acting: `env.reset()` through the preprocessor, the transform, the network, `select_action`, and `env.step()`, on the live batch of one state. Learning: a batch sampled from the buffer, through the transform and the network, no action, no `env.step()`.
 
@@ -217,10 +217,10 @@
 
 ## What landed today
 
-- `src/preprocess.py` no longer normalizes. `preprocess()` returns the resized uint8 frame as-is, and `_get_stacked()` stacks on the last axis instead of the first, so `reset()`/`step()` return `(84, 84, 4)` uint8, matching the replay buffer's storage exactly.
+- `src/preprocess.py` no longer normalizes. `preprocess()` returns the resized uint8 frame as is, and `_get_stacked()` stacks on the last axis instead of the first, so `reset()`/`step()` return `(84, 84, 4)` uint8, matching the replay buffer's storage exactly.
 - Six of seven `test_preprocess.py` tests updated for the new dtype, shape, and axis. All seven pass against a real Pong frame.
 - `src/transform.py` built: one function, uint8 HWC in, single frame or batch, normalized float32 NCHW out on a given device. Handles the missing batch axis on a single frame internally, so neither caller has to know which shape it started with.
-- `tests/test_transform.py` built: an isolated value test against hand-computed expected output, and a round trip test, a frame through `Preprocessor`, through `ReplayBuffer.push`/`sample`, through the transform, checked against transforming the original directly. Both pass.
+- `tests/test_transform.py` built: an isolated value test against hand computed expected output, and a round trip test, a frame through `Preprocessor`, through `ReplayBuffer.push`/`sample`, through the transform, checked against transforming the original directly. Both pass.
 - `architecture.md` corrected: the diagram now shows `Transform` in both the collection and training paths, Preprocessing's output and the network's input are back to matching the actual code.
 
 ## What's open (carrying forward)
@@ -270,7 +270,7 @@
 
 **Date:** 2026-09-12
 
-**Floor:** The two open pre flight items closed with actual output, not memory: four ball coordinates across the stack, and right paddle frames at both extremes. If either one fails, that's the day and the training step moves. The VRAM baseline written into this file, plus the one line on score digits as a known choice. The training step written and verified on a fixture where I know the answer by hand: loss finite, Q-network weights move, target network weights don't.
+**Floor:** The two open pre flight items closed with actual output, not memory: four ball coordinates across the stack, and right paddle frames at both extremes. If either one fails, that's the day and the training step moves. The VRAM baseline written into this file, plus the one line on score digits as a known choice. The training step written and verified on a fixture where I know the answer by hand: loss finite, Q network weights move, target network weights don't.
 
 **Aspiration:** That training step integrated into an end to end loop that runs a few hundred steps without falling over.
 
@@ -584,5 +584,30 @@ Aspiration closed. Floor not met: Run 2 was held at the 5:30 cutoff on purpose r
 - Episode boundaries match across both warmups through step 49,987 and diverge from episode 56, so the instrumentation does not consume the action RNG and divergence begins exactly where gradient updates begin.
 - The Oct 6 plateau definition does not mean one thing. 200 episodes was 182,000 steps at the start of Run 1 and 828,000 at the end, so the same words are a four times looser test at the end than at the start.
 - I predicted the instrumentation would cost under 1 percent and gave a range of 249 to 252. The cost was under 1 percent but the rate came back 256.1, because I treated 252.1 as exact when it moves a couple of percent between runs.
+
+---
+
+# Monday: Run 2 Writeup
+
+**Date:** 2026-10-12
+
+**Floor:**
+
+1. **Copy Run 2's logs into the repo:** the eight files from `~\pong-runs\run-02` into `docs/runs/run-02/`, leaving out `probe.npy` at 13.8 MB since `run_config.json` records its sha256 and it regenerates from `PROBE_SEED`, and leaving the 121 checkpoints at 3.03 GB uncommitted as Run 1 did. The run data currently exists in one place, outside git and outside the OneDrive sync root.
+2. **Write run-02.md's Config and Results:** transcribe Config from `run_config.json`, then score all three pre registered predictions against both evaluation sweeps. Record the limitations alongside them: the training run is a single seed even though the evaluation replicates at two, and the probe samples a random policy's early game states rather than where a trained agent lives.
+3. **Establish what the six actions do:** drive each one in `scripts/visual_check.py` and record the agent paddle's row movement in the columns `PADDLE_COLUMNS` already locates, so the Results section can describe the argmax distribution as paddle direction rather than as action indices. That closes the driven rollout carried since Oct 3.
+
+**Aspiration:**
+
+1. **Settle whether the +18 aspiration is reachable.** PLANS.md sets the bar at above 0 and the aspiration at +18 or better, and both sweeps so far ran every 200,000 steps. The training trailing mean peaked between two of those grid points, so score the fifteen checkpoints between 5,000,000 and 6,000,000 that were never scored, at 100 episodes each, about 80 minutes at the measured 820 steps per second. Start it on the card before writing so the two overlap rather than the sweep adding its runtime to the end of the day. If it is not running within thirty minutes, drop it and spend the day on the floor, since run-02.md is what the Oct 19 case study block depends on.
+2. **Pick the four clip checkpoints for the Oct 15 block.** Choose random, first rally, breakthrough and trained from `episodes.csv` and the evaluation files, with the trained one being the genuine best policy rather than whichever checkpoint the coarse grid happened to land on.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
 
 ---
