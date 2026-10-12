@@ -44,6 +44,14 @@ PADDLE_BAND = (100, 200)
 PADDLE_COLUMNS = {"left (opponent)": (8, 10), "right (agent)": (73, 75)}
 # Where the bottom wall's antialiasing starts, inside the paddle band.
 WALL_GRADIENT_TOP = 75
+# Driven rollout, in raw rows. Only the direction is read, so DRIVE_STEPS can
+# saturate against a wall. DRIVE_CLEARANCE is the room the paddle needs to start
+# with, since one already against a wall cannot move that way.
+NOOP = 0
+DRIVE_SETTLE = 30
+DRIVE_STEPS = 25
+DRIVE_THRESHOLD = 2.0
+DRIVE_CLEARANCE = 20
 
 
 def find_balls(frame: np.ndarray) -> tuple[list[tuple[float, float, int]], int]:
@@ -63,7 +71,7 @@ def find_balls(frame: np.ndarray) -> tuple[list[tuple[float, float, int]], int]:
     return found, excluded
 
 
-env = gymnasium.make("ALE/Pong-v5", render_mode="rgb_array")
+env = gymnasium.make("ALE/Pong-v5", render_mode="rgb_array", repeat_action_probability=0.0)
 
 # np.random covers ReplayBuffer.sample, the action space covers the rollout.
 np.random.seed(SEED)
@@ -89,7 +97,7 @@ magnified = cv2.resize(processed, (504, 504), interpolation=cv2.INTER_NEAREST)
 cv2.imwrite(os.path.join(script_dir, "preprocessed_magnified.png"), magnified)
 
 # Push into a buffer so the renders below use the same path training does. At SEED
-# 42 the episode terminates at step 1100 (959 at seed 7), so 1,200 clears it.
+# 42 with sticky actions off the episode terminates at step 946, so 1,200 clears it.
 BUILD_STEPS = 1_200
 
 initial_stacked = prep.reset(obs)
@@ -152,6 +160,11 @@ sampled_input = transform(sampled_state, DEVICE)
 sampled_hwc = (sampled_input[0].permute(1, 2, 0).cpu().numpy() * 255.0).round().astype(np.uint8)
 save_stack_strip(sampled_hwc, "stacked_frames_through_transform.png")
 
+# Checks 3 and 4 report by printing rather than raising, since a missing paddle or
+# a stalled ball is worth seeing in context. Collected here so the summary at the
+# bottom cannot claim everything passed while one of them printed a MISMATCH.
+problems = []
+
 print(f"Raw: {obs.shape}")
 print(f"Processed: {processed.shape}, dtype={processed.dtype}, min={processed.min()}, max={processed.max()}")
 print(f"Stacked: {stacked.shape}, dtype={stacked.dtype}")
@@ -197,6 +210,7 @@ for name, (first_col, last_col) in PADDLE_COLUMNS.items():
     raw_start, raw_length = longest_run(raw_paddle_band[:, raw_first:raw_last + 1].any(axis=1))
     if raw_length == 0:
         print(f"  {name}: NOT FOUND in raw cols {raw_first}-{raw_last}, nothing to predict from")
+        problems.append(f"{name} paddle not found in the raw frame")
         continue
 
     # Windowed. A global longest run relocates to a border blend and skips the check.
@@ -205,6 +219,7 @@ for name, (first_col, last_col) in PADDLE_COLUMNS.items():
     window_start, length = longest_run(paddle_band[window_top:window_bottom, first_col:last_col + 1].any(axis=1))
     if length == 0:
         print(f"  {name}: MISSING, raw paddle is {raw_length} rows at {raw_start}-{raw_start + raw_length - 1} but scaled rows {window_top}-{window_bottom - 1} are empty  <-- MISMATCH")
+        problems.append(f"{name} paddle is in the raw frame but not the scaled one")
         continue
     top = window_top + window_start
     bottom = top + length - 1
@@ -227,6 +242,8 @@ for name, (first_col, last_col) in PADDLE_COLUMNS.items():
         print(f"  {name}: rows {top}-{bottom}, height {length}, {position}, height not asserted, scaled run merged with a border blend ({raw_extent})")
         continue
     verdict = "" if length in expected else "  <-- MISMATCH"
+    if length not in expected:
+        problems.append(f"{name} paddle height {length}, expected {sorted(expected)}")
     print(f"  {name}: rows {top}-{bottom}, height {length} (expected {sorted(expected)} from {raw_extent}), {position}{verdict}")
 
 
@@ -253,6 +270,7 @@ def report_stack_motion(state: np.ndarray, label: str) -> None:
     gaps = sum(1 for p in positions if p is None)
     if not deltas:
         print(f"  cannot judge motion, no two adjacent slots both have a ball ({gaps} slot(s) empty)")
+        problems.append(f"motion not measurable for {label}")
         return
     # Slot 0 is oldest, so deltas share a sign unless the ball bounced.
     sign_changes = sum(1 for a, b in zip(deltas, deltas[1:]) if a * b < 0)
@@ -260,6 +278,7 @@ def report_stack_motion(state: np.ndarray, label: str) -> None:
     print(f"  column deltas oldest to newest: {deltas}, sign changes: {sign_changes} (expect 0, or 1 on a bounce){coverage}")
     if all(d == 0 for d in deltas):
         print("  WARNING: ball did not move across the stack, slots may be duplicates")
+        problems.append(f"ball did not move across the stack for {label}")
 
 
 if motion_stack is None:
@@ -271,6 +290,8 @@ report_stack_motion(sampled_hwc, "sampled stack through transform")
 
 # Check 5: the slot assert ran in the loop, so 0 here means nothing was checked.
 print(f"Episode boundaries exercised: {len(boundary_stacks)} at step(s) {[step for step, _ in boundary_stacks]}, all 4 slots identical after each reset")
+if not boundary_stacks:
+    problems.append(f"no episode ended within {BUILD_STEPS:,} steps, the reset slot assert never ran")
 for step, boundary_stack in boundary_stacks:
     save_stack_strip(boundary_stack, f"stacked_frames_after_reset_step{step}.png")
 
@@ -293,3 +314,77 @@ def save_annotated_strip(state: np.ndarray, filename: str) -> None:
 
 save_annotated_strip(motion_stack if motion_stack is not None else stacked, "stacked_frames_annotated.png")
 print("Wrote stacked_frames_annotated.png: slots numbered, detected ball circled.")
+
+
+# Check 6: what the six actions do. metrics.csv records argmax counts as action
+# indices, and names from get_action_meanings() are not proof that RIGHTFIRE moves
+# the same way as RIGHT, which reading those counts as movement pairs assumes.
+def paddle_row(frame_rgb: np.ndarray) -> float | None:
+    # Raw frame, not processed: the resize blends the paddle into the border.
+    gray = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2GRAY)
+    band = (gray > PADDLE_BAND[0]) & (gray < PADDLE_BAND[1])
+    first_col, last_col = RAW_PADDLE_COLUMNS["right (agent)"]
+    start, length = longest_run(band[:, first_col:last_col + 1].any(axis=1))
+    return None if length == 0 else start + (length - 1) / 2
+
+
+def settle(environment) -> np.ndarray:
+    # NOOP does not move the paddle, so this returns it to its reset position.
+    obs, _ = environment.reset(seed=SEED)
+    for _ in range(DRIVE_SETTLE):
+        obs, _, _, _, _ = environment.step(NOOP)
+    return obs
+
+
+# At the v5 default of 0.25 a quarter of the driven steps would replay the previous
+# action, so the deltas would mean nothing.
+drive_env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=0.0)
+meanings = drive_env.unwrapped.get_action_meanings()
+print(f"Action meanings from the emulator: {meanings}")
+
+start_row = paddle_row(settle(drive_env))
+assert start_row is not None, "agent paddle not found after settling, nothing to drive"
+headroom = min(start_row - RAW_FIELD_TOP, RAW_FIELD_BOTTOM - start_row)
+assert headroom >= DRIVE_CLEARANCE, (
+    f"paddle starts at raw row {start_row:.1f}, only {headroom:.1f} rows from a wall. "
+    f"One direction cannot move from there, so the readings below would be meaningless"
+)
+print(f"Agent paddle starts at raw row {start_row:.1f}, {headroom:.1f} rows of clearance")
+print(f"Row after {DRIVE_STEPS} steps holding each action:")
+
+directions = []
+for action, name in enumerate(meanings):
+    obs = settle(drive_env)
+    before = paddle_row(obs)
+    for _ in range(DRIVE_STEPS):
+        obs, _, terminated, truncated, _ = drive_env.step(action)
+        if terminated or truncated:
+            break
+    after = paddle_row(obs)
+
+    if before is None or after is None:
+        directions.append(None)
+        print(f"  action {action} ({name}): paddle not found, cannot judge")
+        problems.append(f"paddle not found while driving action {action}")
+        continue
+    delta = after - before
+    # Rows increase downward, so a positive delta is movement down the screen.
+    moved = "down" if delta > DRIVE_THRESHOLD else "up" if delta < -DRIVE_THRESHOLD else "none"
+    directions.append(moved)
+    print(f"  action {action} ({name}): row {before:.1f} to {after:.1f}, delta {delta:+.1f}, {moved}")
+
+drive_env.close()
+
+# If these do not hold, reading the argmax counts as three movement groups is wrong.
+assert directions[0] == directions[1] == "none", f"0 and 1 moved the paddle: {directions}"
+assert directions[2] == directions[4] != "none", f"2 and 4 disagree: {directions}"
+assert directions[3] == directions[5] != "none", f"3 and 5 disagree: {directions}"
+assert directions[2] != directions[3], f"both pairs moved the same way: {directions}"
+print(f"Movement pairs: 0 and 1 none, 2 and 4 {directions[2]}, 3 and 5 {directions[3]}")
+
+if problems:
+    print(f"\n{len(problems)} check(s) reported a problem:")
+    for problem in problems:
+        print(f"  - {problem}")
+    sys.exit(1)
+print("\nAll checks passed!")

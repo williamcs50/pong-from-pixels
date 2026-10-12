@@ -26,7 +26,7 @@ except ImportError:
 
 def check_gymnasium():
     try:
-        env = gym.make("ALE/Pong-v5")
+        env = gym.make("ALE/Pong-v5", repeat_action_probability=0.0)
         env.reset()
         env.step(env.action_space.sample())
         env.close()

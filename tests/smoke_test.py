@@ -31,7 +31,7 @@ def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
 
     Returns the filled buffer, the network, and the action count.
     """
-    env = gymnasium.make("ALE/Pong-v5", render_mode="rgb_array")
+    env = gymnasium.make("ALE/Pong-v5", render_mode="rgb_array", repeat_action_probability=0.0)
     n_actions = env.action_space.n
 
     prep = Preprocessor()
