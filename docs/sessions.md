@@ -568,7 +568,7 @@ Aspiration closed. Floor not met: Run 2 was held at the 5:30 cutoff on purpose r
 ## What's open (carrying forward)
 
 - **The floor.** Run 2 is not launched. Everything it needs is done except the pre registration, and it goes tomorrow morning.
-- Run 2's pre registration, now seven items rather than three: the crossing, the final value, the plateau definition, the replication band against Run 1's first 2,000,000, whether any checkpoint clears the bar, the replay fraction early and late, and when the argmax counts stop moving as a block.
+- Run 2's pre registration, three items: the crossing, the plateau definition, and whether any checkpoint clears the bar.
 - The README does not mention `sweep_eval.py`.
 - The probe's limitation, that a random policy visits early game states rather than where a trained agent lives, is only in a code comment and belongs in `run-02.md`.
 - No test covers the sweep, `git_info.py`, the instrumentation, logging or checkpointing. That is five things verified by hand.
