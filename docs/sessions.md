@@ -644,3 +644,35 @@ Floor met, all three items. Aspiration half closed: the +18 question is settled,
 - RIGHT moves the paddle up. The action names are about the joystick, not the screen, which is why this needed measuring rather than reading.
 
 ---
+
+# Tuesday: Tuesday: Instrumentation and Clip Picks
+
+**Date:** 2026-10-13
+
+**Floor:**
+
+1. **Add an Instrumentation section to run-02.md.** PLANS.md's finish line item 4 asks for Q value drift, the epsilon schedule, replay dynamics, wall clock time, VRAM and GPU temperature. The last three are already in run-02.md's Throughput and hardware section. The first three are logged in `docs/runs/run-02/metrics.csv`, one row every 10,000 env steps, and none of it is reported yet. Every figure comes from that file:
+   - **Q value drift:** how `q_max_mean` (the average highest Q value over 500 fixed probe states) and `q_spread_mean` (the average gap between highest and lowest Q) change across the run.
+   - **Epsilon as logged:** the `epsilon` column, including the step where it first hits 0.01.
+   - **Replay dynamics:** `batch_reward_fraction` (share of sampled transitions where a point was scored) and `batch_done_fraction` (share that end an episode), and how both change as rallies get longer.
+   - **Paddle direction:** the six `argmax_count` columns, grouped by what each action does on screen. On Oct 12, `visual_check.py` measured that actions 2 and 4 move the paddle up, 3 and 5 move it down, and 0 and 1 leave it still.
+2. **Test whether Q spread moved before reward did** The Oct 12 analysis suggested `q_spread_mean` started rising about 450,000 steps before the trailing 100 reward mean in `episodes.csv` did, but that was never written down or checked. Before computing anything, write down one rule for "the step where a series starts rising", apply it to both series, and decide what result would mean the claim is false. Report the result either way.
+3. **Check the logger before trusting it.** Confirm that `metrics.csv` has 601 data rows spaced exactly 10,000 steps apart, that the six argmax counts sum to 500 on every row, and that `make_probe()` still regenerates the probe with the sha256 recorded in `run_config.json`. If any of these fail, items 1 and 2 are measuring a broken instrument. 
+4. **Pick the four clip checkpoints** The Oct 15 block records a clip at each milestone named in PLANS.md: random, first rally, breakthrough, trained. Random is step 0 and trained is 5,400,000, the best evaluated checkpoint. For the other two, write down what "first rally" and "breakthrough" mean in terms of `episodes.csv` before looking, then take the nearest saved checkpoint, since saves are every 50,000 steps. Record the four picks and the reasoning in run-02.md.
+
+
+
+**Aspiration:**
+
+1. **Get one test clip out of the 5,400,000 checkpoint.** No script in the repo records video yet: `play_checkpoint.py` only plays episodes and print rewards. Add recording, save one episode as a video, and time it, so the Oct 15 block is planned around how long a clip actually takes.
+2. **Make `analyze_run.py` print two figures it currently skips:** the fill phase rate (steps per second before the first gradient update) and the env step where the trailing 100 mean peaked. Both run files compute these by hand.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
+
+---
