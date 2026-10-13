@@ -11,6 +11,8 @@ from src.replay_buffer import ReplayBuffer
 
 gym.register_envs(ale_py)
 
+ADAM_MOMENTS = 2  # first and second moment, one float per Q weight each
+
 # torch is the one guarded import. requirements.txt deliberately leaves it out
 # and tells you to install it manually for your hardware, so "not installed" is
 # a state this script exists to report, not one it should crash on. Everything
@@ -18,7 +20,9 @@ gym.register_envs(ale_py)
 try:
     import torch
 
+    from scripts.real_train import REAL_CONFIG
     from src.q_network import QNetwork
+    from src.train import train_step
 except ImportError:
     torch = None
     QNetwork = None
@@ -53,9 +57,8 @@ def check_torch():
 
 
 def check_vram_baseline():
-    # Baseline before the training loop exists, so its growth can be attributed
-    # later instead of guessed at. The number that constrains batch size is free
-    # VRAM, not total: the desktop and browser already hold part of the 6GB.
+    # The number that constrains batch size is free VRAM, not total: the desktop
+    # and browser already hold part of the 6GB.
     if torch is None:
         return
     if not torch.cuda.is_available():
@@ -66,17 +69,43 @@ def check_vram_baseline():
     free_before, total = torch.cuda.mem_get_info()
     print(f"OK  VRAM total: {total / mib:.0f} MiB, free before allocation: {free_before / mib:.0f} MiB")
 
+    # Measured as growth, since earlier checks leave allocations behind, such as the
+    # cuBLAS workspace from check_torch's matrix multiply.
+    before_networks = torch.cuda.memory_allocated()
+
     # Pong has 6 actions. Target network is a second instance with frozen weights.
     q_network = QNetwork(n_actions=6).cuda()
     target_network = QNetwork(n_actions=6).cuda()
     target_network.load_state_dict(q_network.state_dict())
-    weights = torch.cuda.memory_allocated()
+    weights = torch.cuda.memory_allocated() - before_networks
     print(f"OK  both networks resident: {weights / mib:.1f} MiB")
+    if before_networks:
+        print(f"NOTE  {before_networks / mib:.1f} MiB was already allocated before the networks, "
+              f"the cuBLAS workspace from check_torch's matrix multiply")
 
-    # Optimizer state is allocated lazily, so it does not appear until a step
-    # runs. That, and the activation peak during forward and backward, are the
-    # numbers that need the training loop and cannot be measured here yet.
-    print("NOTE  optimizer state and the activation peak per training step are not measured yet, they need the training loop")
+    # Optimizer state is allocated lazily, so it only appears once a real step runs.
+    optimizer = torch.optim.Adam(q_network.parameters(), lr=REAL_CONFIG["learning_rate"])
+    batch_size = REAL_CONFIG["batch_size"]
+    shapes = ReplayBuffer(capacity=batch_size)
+    batch = (shapes.current_state, shapes.action_taken, shapes.reward, shapes.next_state, shapes.done)
+
+    train_step(q_network, target_network, optimizer, batch, REAL_CONFIG["gamma"])
+    param_bytes = sum(p.nbytes for p in q_network.parameters())
+    adam_bytes = sum(t.nbytes for state in optimizer.state.values()
+                     for t in state.values() if torch.is_tensor(t))
+    print(f"OK  Adam state: {adam_bytes / mib:.2f} MiB, against {ADAM_MOMENTS * param_bytes / mib:.2f} "
+          f"MiB for {ADAM_MOMENTS} moments of {param_bytes / mib:.2f} MiB of Q weights")
+
+    # Measured on a second step, so the one time allocations of the first are not counted.
+    steady = torch.cuda.memory_allocated()
+    torch.cuda.reset_peak_memory_stats()
+    train_step(q_network, target_network, optimizer, batch, REAL_CONFIG["gamma"])
+    print(f"OK  training step at batch {batch_size}: {(steady - before_networks) / mib:.1f} MiB resident, "
+          f"peak {(torch.cuda.max_memory_allocated() - steady) / mib:.1f} MiB above it")
+    # Confirmed by setting CUBLAS_WORKSPACE_CONFIG, which resized this block and the one above.
+    print("NOTE  resident includes a second cuBLAS workspace, created for the backward pass's own thread")
+    print("NOTE  these count this process's tensors only. nvidia-smi and gpu_log.csv report the whole "
+          "card, including the CUDA context and other programs")
 
 
 class MEMORYSTATUSEX(ctypes.Structure):
