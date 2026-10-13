@@ -676,7 +676,7 @@ The floor has been met. Item 2 is reported as an observation, since the rule was
 - Q spread started rising about 520,000 steps before reward, at a 5 percent threshold. It leads at every threshold from 5 to 30 percent, but the "about 450,000" from Oct 12 didn't reproduce exactly.
 - I wrote the four clip rules and committed them at 14:25:50. First rally uses episode length, since a rally is the ball coming back and length rises before score does.
 - I rescored checkpoints 0 to 1,000,000 into `eval_lengths.csv`, adding `std_episode_steps`, twice. Both runs matched each other and the original `eval.csv` exactly, so evaluation is deterministic.
-- The rules picked 0, 600,000, 2,800,000, and 5,400,000 for random, first rally, first over the bar, and trained.
+- The rules picked four checkpoints. Random is 0, the untrained network. First rally is 600,000, the first checkpoint whose episodes run clearly longer than the untrained network's, meaning the agent started returning the ball. First over the bar is 2,800,000, the first checkpoint that beats the built in opponent, with a mean evaluation reward above 0. It replaces "breakthrough" from the floor, which never said what it measured. Trained is 5,400,000, the checkpoint with the highest mean reward.
 - Prediction 2's outcome is revised. The plateau rule fired as defined, but the run went on to +19.02, so it wasn't the ceiling I said it would be.
 - `analyze_run.py` now prints every figure in run-01.md and run-02.md that comes from the runs' own files, plus `--compare` for figures across runs.
 - Tests now cover `sweep_eval.py`, `git_info.py`, `probe.py` and `probe_metrics()`, `train()`'s writing of `episodes.csv` and `metrics.csv`, `checkpoint.py`, and `analyze_run.py`. All tests pass.
