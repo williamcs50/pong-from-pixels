@@ -2,7 +2,7 @@ import gymnasium as gym
 import ale_py
 
 # Create the Pong environment
-env = gym.make("ALE/Pong-v5", render_mode="human")
+env = gym.make("ALE/Pong-v5", render_mode="human", repeat_action_probability=0.0)
 
 # Reset the environment
 obs, info = env.reset()

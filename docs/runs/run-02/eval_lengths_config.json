@@ -1,0 +1,24 @@
+[
+  {
+    "run_dir": "C:\\Users\\Willi\\pong-runs\\run-02",
+    "every": 200000,
+    "episodes": 100,
+    "epsilon": 0.05,
+    "seed": 0,
+    "repeat_action_probability": 0.0,
+    "through": 1000000,
+    "steps_to_evaluate": [
+      0,
+      200000,
+      400000,
+      600000,
+      800000,
+      1000000
+    ],
+    "device": "cuda",
+    "git_commit": "a6ce59e33162376bae36796be846027860f0d6fa",
+    "git_dirty": true,
+    "git_status": "M scripts/sweep_eval.py\n M src/evaluate.py",
+    "started_at": "2026-10-13T14:49:36"
+  }
+]

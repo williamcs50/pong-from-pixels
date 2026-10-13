@@ -28,6 +28,8 @@ TINY_CONFIG = {
     "repeat_action_probability": 0.0,  # off, matching the DQN papers
     "seed": 0,
     "checkpoint_every_steps": 250,  # small enough that the save path runs several times
+    "metrics_every_steps": 200,  # small enough that the file gets several rows
+    "probe_path": None,
 }
 
 # Under the shared root, but its own subtree so tiny runs do not consume the real

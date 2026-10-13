@@ -1,0 +1,4 @@
+env_step,episodes,epsilon,seed,mean_reward,std_reward,mean_episode_steps,elapsed_s
+0,100,0.05,1,-20.97,0.17,844,103
+1800000,100,0.05,1,-1.89,4.43,3732,455
+2000000,100,0.05,1,-4.54,3.16,3727,453

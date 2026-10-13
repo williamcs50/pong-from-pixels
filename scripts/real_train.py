@@ -31,6 +31,8 @@ REAL_CONFIG = {
     "repeat_action_probability": 0.0,  # v5 defaults this to 0.25
     "seed": 0,  # not bit reproducible on GPU, cuDNN picks nondeterministic kernels
     "checkpoint_every_steps": 50_000,  # 40 checkpoints at 27 MB, about 1.1 GB
+    "metrics_every_steps": 10_000,  # 600 rows over a 6M step run
+    "probe_path": None,  # generated from PROBE_SEED and saved into the run directory
 }
 
 
@@ -53,6 +55,12 @@ def parse_args():
         help="run with uncommitted changes. Never pass this for a real launch: the "
              "recorded commit would not describe what ran.",
     )
+    parser.add_argument(
+        "--probe",
+        default=REAL_CONFIG["probe_path"],
+        help="reuse an earlier run's probe.npy, so Q figures are measured on byte "
+             "identical states. Defaults to generating one from PROBE_SEED.",
+    )
     return parser.parse_args()
 
 
@@ -65,5 +73,6 @@ if __name__ == "__main__":
     config["total_steps"] = args.total_steps
     config["output_dir"] = args.output_dir or next_run_dir(RUNS_ROOT)
     config["allow_dirty"] = args.allow_dirty
+    config["probe_path"] = args.probe
 
     train(**config)
