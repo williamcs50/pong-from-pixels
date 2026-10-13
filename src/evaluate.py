@@ -97,6 +97,7 @@ def evaluate(
         # from eval noise. Standard error is this over the root of the episode count.
         "std_reward": statistics.stdev(rewards) if len(rewards) > 1 else 0.0,
         "mean_episode_steps": statistics.fmean(lengths),
+        "std_episode_steps": statistics.stdev(lengths) if len(lengths) > 1 else 0.0,
         "rewards": rewards,
         "lengths": lengths,
         "actions": dict(sorted(actions_taken.items())),

@@ -20,10 +20,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import torch
 
 from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, evaluate
-from src.git_info import git_state
+from src.git_info import git_state, software_versions
 
 COLUMNS = ["env_step", "episodes", "epsilon", "seed", "mean_reward", "std_reward",
-           "mean_episode_steps", "elapsed_s"]
+           "mean_episode_steps", "std_episode_steps", "elapsed_s"]
 
 
 def parse_args():
@@ -40,6 +40,8 @@ def parse_args():
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--repeat-action-probability", type=float, default=0.0)
+    parser.add_argument("--through", type=int, default=None,
+                        help="evaluate only checkpoints up to and including this step")
     parser.add_argument("--out", default=None, help="defaults to <run_dir>/eval.csv")
     return parser.parse_args()
 
@@ -64,7 +66,8 @@ def record_invocation(path, settings):
     # Not refused on a dirty tree the way train() is, since re-scoring a checkpoint
     # mid development is normal. The dirty flag says so instead.
     history = json.load(open(path)) if os.path.exists(path) else []
-    history.append({**settings, **git_state(), "started_at": datetime.datetime.now().isoformat(timespec="seconds")})
+    history.append({**settings, **git_state(), **software_versions(),
+                    "started_at": datetime.datetime.now().isoformat(timespec="seconds")})
 
     with open(path, "w") as handle:
         json.dump(history, handle, indent=2)
@@ -96,6 +99,8 @@ if __name__ == "__main__":
     out_path = args.out or os.path.join(args.run_dir, "eval.csv")
 
     targets = checkpoints_to_evaluate(checkpoint_dir, args.every)
+    if args.through is not None:
+        targets = [(step, path) for step, path in targets if step <= args.through]
     done = already_done(out_path)
     pending = [(step, path) for step, path in targets if step not in done]
 
@@ -116,6 +121,7 @@ if __name__ == "__main__":
         "epsilon": args.epsilon,
         "seed": args.seed,
         "repeat_action_probability": args.repeat_action_probability,
+        "through": args.through,
         "steps_to_evaluate": [step for step, _ in pending],
         "device": str(device),
     })
@@ -159,6 +165,7 @@ if __name__ == "__main__":
             f"{result['mean_reward']:.2f}",
             f"{result['std_reward']:.2f}",
             f"{result['mean_episode_steps']:.0f}",
+            f"{result['std_episode_steps']:.0f}",
             f"{elapsed:.0f}",
         ])
         log.flush()
@@ -166,8 +173,9 @@ if __name__ == "__main__":
         print(f"  [{index}/{len(pending)}] step {step:>9,}  "
               f"mean reward {result['mean_reward']:+6.2f} "
               f"sd {result['std_reward']:.2f}  "
-              f"mean steps {result['mean_episode_steps']:>5.0f}  "
-              f"{elapsed:.0f}s")
+              f"mean steps {result['mean_episode_steps']:>5.0f} "
+              f"sd {result['std_episode_steps']:.0f}  "
+              f"took {elapsed:.0f} s")
 
     log.close()
     print(f"done in {(time.perf_counter() - started) / 60:.1f} min, wrote {out_path}")
