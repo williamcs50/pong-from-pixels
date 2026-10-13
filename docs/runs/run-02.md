@@ -1,28 +1,30 @@
 # Run 2
 
-Every figure here except the checkpoint count and size comes from the run's own
-`run_config.json`, `episodes.csv`, `metrics.csv`, `gpu_log.csv` and the two
-evaluation files, all eight committed in [run-02/](run-02/) alongside the warmup
-pass's three files in [run-02-warmup/](run-02-warmup/), so every number here can be
-checked. The commands that produce them are at the bottom. The checkpoints themselves are not committed at 3.03 GiB (3.26 GB), so their count and
-size are measured on disk instead. The 500 state probe is not committed either, at
-13.5 MB, because `run_config.json` records its sha256 and it regenerates from
+Every number here comes from the run's own files, which are committed in
+[run-02/](run-02/): `run_config.json`, `episodes.csv`, `metrics.csv`, `gpu_log.csv`,
+the two evaluation files, and the length rescore. The warmup pass's three files are in
+[run-02-warmup/](run-02-warmup/). The commands that produce every number are at the
+bottom, so you can check any of them.
+
+Two things aren't committed. The checkpoints are 3.03 GiB (3.26 GB), so I measured
+their count and size on disk. The 500 state probe is 13.5 MB, and it doesn't need to
+be committed: `run_config.json` records its sha256, and it regenerates from
 `PROBE_SEED`.
 
 **Output:** `run-02` under `RUNS_ROOT`, which [src/run_paths.py](../../src/run_paths.py)
 resolves to `~/pong-runs`, outside the OneDrive sync root.
 
-**Commit:** `1e407be98054234feefd5dcbdfd87291515d2a94`, with `git_dirty` false, so
-the run launched from committed code. That is the same commit that recorded the pre
-registration below, made Oct 10 at 21:31:53, which is 14 hours and 17 minutes
-before the run started.
+**Commit:** `1e407be98054234feefd5dcbdfd87291515d2a94`, with `git_dirty` false, so the
+run launched from committed code. It's the same commit that recorded the pre
+registration below. I made it on Oct 10 at 21:31:53, 14 hours and 17 minutes before
+the run started.
 
-The warmup pass ran from `f03f1410977e553ea26d0d0841f750160eb60aa8`. Unlike Run 1's,
-the two are not documentation only: `real_train.py` gained a `--probe` flag the run
-never used, `probe.py` lost an unused `import os`, and `analyze_run.py` gained a
-guard for a missing GPU log. None of it touches training, and both runs recorded
-the same probe sha256, which is evidence rather than an argument from the diff.
-Check with `git diff --stat f03f141 1e407be`.
+The warmup pass ran from `f03f1410977e553ea26d0d0841f750160eb60aa8`. Unlike Run 1,
+the changes between the warmup and the run aren't just documentation. `real_train.py`
+gained a `--probe` flag the run never used, `probe.py` lost an unused `import os`, and
+`analyze_run.py` gained a guard for a missing GPU log. None of that touches training.
+Both runs also recorded the same probe sha256, which is actual evidence, not just me
+reading the diff. You can check with `git diff --stat f03f141 1e407be`.
 
 **Started:** 2026-10-11 11:49:22. **Wall clock:** 6.88 hours.
 
@@ -39,7 +41,7 @@ states with its sha256 in `run_config.json`.
 | # | Prediction | Why | Outcome |
 |---|---|---|---|
 | 1 | The trailing 100 mean crosses 0 before step 2,300,000 | Run 1 gained 2.02, 2.27 and 2.56 points over its last three 200,000 step windows and ended at -0.11 at 2,000,000. Same config and seed, so Run 2 should track it to 2,000,000 and cross shortly after. | Failed. It crossed at 2,715,875, missing by 415,875 steps. |
-| 2 | A plateau is the trailing mean moving less than 1.0 across 200,000 env steps | Restated from Run 1's "200 episodes", which spanned roughly four times as many steps late in the run as early, so the same words were a looser test at the end. Steps are comparable across the whole run. | Fired falsely. From 3,600,000 to 3,800,000 the trailing mean stayed within 0.94, under the 1.0 threshold, while evaluation moved 8.80 at seed 0 and 9.51 at seed 1, so the definition reported stability where the policy was unstable. It fires in 12 of the 30 windows between evaluated checkpoints, counting either the change between endpoints or the range inside, including 1,800,000 to 2,000,000, where evaluation fell 3.40. |
+| 2 | A plateau is the trailing mean moving less than 1.0 across 200,000 env steps | Restated from Run 1's "200 episodes", which spanned roughly four times as many steps late in the run as early, so the same words were a looser test at the end. Steps are comparable across the whole run. | It fired, but what I said it would mean turned out wrong. From 3,600,000 to 4,000,000 the trailing mean stayed within 1.0 in each 200,000 step window, exactly as defined. Then the run kept going to +19.02, so that flat stretch wasn't the ceiling I said it would be. In the same stretch, evaluation moved 8.80 at seed 0 and 9.51 at seed 1. A trailing mean averages about 250,000 steps of play, so it can't show swings that short. The definition fires in 12 of the 30 windows between evaluated checkpoints, counting either the change between endpoints or the range inside. |
 | 3 | At least one checkpoint clears a mean above 0 over 100 evaluation episodes | Run 1's best was -1.63 at 1,800,000 and no checkpoint cleared the bar. Three times the steps should be enough if the frame budget was the binding constraint. | Passed. 17 of 31 checkpoints at seed 0 and 18 at seed 1, with the best at +16.97 at step 5,400,000. |
 
 **What each outcome means:**
@@ -72,16 +74,18 @@ states with its sha256 in `run_config.json`.
 | Device | NVIDIA GeForce RTX 2060 |
 | Action space | 6 |
 
-Every value is Run 1's except `total_steps`, which Run 1's result set, and the two
-instrumentation rows. The reasoning behind the shared values is in the 2026-10-06
-entry of [sessions.md](../sessions.md), and the reasoning behind the
-instrumentation is in the 2026-10-09 entry.
+Everything matches Run 1 except `total_steps`, which Run 1's result decided, and the
+two instrumentation rows. My reasoning for the shared values is in the 2026-10-06
+entry of [sessions.md](../sessions.md), and for the instrumentation in the 2026-10-09
+entry.
 
 ---
 
 ## Results
 
-**The agent reached the bar.** The trailing mean over the last 100 episodes crossed 0 at step 2,715,875. Its best value was +19.02 and its final value was +16.80, at step 5,998,105. All four figures are derived from `run-02/episodes.csv`.
+**The agent reached the bar.** The trailing mean over the last 100 episodes crossed
+0 at step 2,715,875. It peaked at +19.02 and finished at +16.80, at step 5,998,105.
+All four of those come from `run-02/episodes.csv`.
 
 | Step | Trailing 100 mean |
 |---|---|
@@ -116,45 +120,44 @@ instrumentation is in the 2026-10-09 entry.
 | 5,800,000 | +17.75 |
 | 5,998,105 | +16.80 |
 
-Each row is the nearest episode boundary to that step, since the trailing mean only
-exists where an episode ended. The last row is the run's final boundary, 1,895
-steps short of 6,000,000.
+The trailing mean only exists where an episode ended, so each row is the nearest
+episode boundary to that step. The last row is the run's final boundary, 1,895 steps
+short of 6,000,000.
 
-2,495 episodes, 1,487,027 gradient updates at the last logged episode. 2,212 of
-those episodes ran at epsilon 0.01, the floor the schedule reaches at step 250,000.
-The bar is defined over 100 evaluation episodes at epsilon 0.05, and the two are
-not interchangeable: training finished at +16.80 while the final checkpoint scores
-+12.60.
+The run had 2,495 episodes and 1,487,027 gradient updates by the last logged episode.
+2,212 of those episodes ran at epsilon 0.01, the floor the schedule reaches at step
+250,000. These are training episodes, though, and the bar is defined over 100
+evaluation episodes at epsilon 0.05. The two aren't interchangeable: training finished
+at +16.80, but the final checkpoint scores +12.60.
 
-**My pre registered prediction failed.** On 2026-10-10 I predicted the trailing
-mean would cross 0 before step 2,300,000. It crossed at 2,715,875, missing by
-415,875 steps.
+**My pre registered prediction failed.** On 2026-10-10 I predicted the trailing mean
+would cross 0 before step 2,300,000. It crossed at 2,715,875, 415,875 steps late.
 
-**Its premise was wrong, which matters more.** I assumed Run 2 would track Run 1 to
-2,000,000 because the config and the seed are identical. At 2,000,000 Run 1 was at
--0.11 and Run 2 at -11.43, a gap of 11.32 points. The two runs are identical in every
-column but wall clock time for 54 episodes and first differ at episode 55, the first one spanning step 50,000
-where updates begin, so a fixed seed does not reproduce a run on this hardware.
+**The reason it failed matters more than the miss.** I assumed Run 2 would track Run 1
+up to 2,000,000, since the config and the seed are identical. It didn't. At 2,000,000
+Run 1 was at -0.11 and Run 2 was at -11.43, 11.32 points apart. The two runs match in
+every column except wall clock time for the first 54 episodes. They split at episode
+55, the first one that crosses step 50,000, which is where gradient updates start. So
+on this hardware, a fixed seed doesn't reproduce a run.
 
-**The curve did not end at its best.** It peaked at +19.02 and finished 2.22 points
-lower at +16.80, where Run 1 ended at its own maximum.
+**The curve didn't end at its best.** It peaked at +19.02 and finished 2.22 points
+lower, at +16.80. Run 1, by contrast, ended at its own maximum.
 
-**Supporting evidence that the learning is real rather than noise:**
+**Supporting evidence that the learning is real, not noise:**
 
-- Mean loss per episode fell from 0.012040 to 0.000986, staying finite throughout,
-  ranging 0.000194 to 0.013529.
-- Zero shutouts in the last 100 episodes, though Run 1 reported zero too, so this
-  no longer separates a losing agent from a winning one.
+- Mean loss per episode fell from 0.012040 to 0.000986. It stayed finite the whole
+  run, ranging 0.000194 to 0.013529.
+- There were zero shutouts in the last 100 episodes. Run 1 had zero too, though, so
+  this doesn't separate a losing agent from a winning one anymore.
 
 ---
 
 ## Evaluation
 
-The figures above are training episodes at epsilon 0.01. The bar is defined over
-100 evaluation episodes, so every 200,000th checkpoint was scored separately at
-epsilon 0.05, twice, at two independent evaluation seeds, in
-[run-02/eval.csv](run-02/eval.csv) and
-[run-02/eval_seed1.csv](run-02/eval_seed1.csv).
+Everything above is training episodes at epsilon 0.01. The bar is defined over 100
+evaluation episodes, so I scored every 200,000th checkpoint separately at epsilon 0.05.
+I scored each one twice, at two independent evaluation seeds, in
+[run-02/eval.csv](run-02/eval.csv) and [run-02/eval_seed1.csv](run-02/eval_seed1.csv).
 
 | Step | Seed 0 | Seed 1 | Training trailing 100 | Seed 0 minus training |
 |---|---|---|---|---|
@@ -191,55 +194,67 @@ epsilon 0.05, twice, at two independent evaluation seeds, in
 | 6,000,000 | +12.60 | +12.18 | +16.80 | -4.20 |
 
 **17 checkpoints clear the bar at seed 0, and 18 at seed 1.** The best is +16.97 at
-step 5,400,000, which is also the best at seed 1 at +16.67.
+step 5,400,000, and it's the best at seed 1 too, at +16.67.
 
-**The best checkpoint is not the last one.** 5,400,000 beats 6,000,000 by 4.37
-points, which against standard errors of 0.21 and 0.25 is 13.3 combined. At seed 1
-the same comparison gives 4.49 points and 12.6. The standard error is
-`std_reward / 10`, since the root of 100 episodes is 10.
+**The best checkpoint isn't the last one.** 5,400,000 beats 6,000,000 by 4.37 points.
+With standard errors of 0.21 and 0.25, that's 13.3 combined standard errors, so it's
+nowhere near noise. Seed 1 gives 4.49 points and 12.6. The standard error is
+`std_reward / 10`, since the square root of 100 episodes is 10.
 
-**The two seeds agree everywhere.** Their mean absolute difference across all 31
-checkpoints is 0.29 points, the largest single difference is 1.10 at 2,600,000, and
-**none of the 31 differs by more than two standard errors**. So 100 episodes at
-epsilon 0.05 ranks checkpoints reliably, and every feature of this curve is a
-property of the policy rather than of the episodes it happened to be scored on.
+**The two seeds agree everywhere.** Across all 31 checkpoints they differ by 0.29
+points on average. The biggest single difference is 1.10, at 2,600,000, and **none of
+the 31 differ by more than two standard errors**. That tells me 100 episodes at epsilon
+0.05 is enough to rank checkpoints reliably. Every bump in this curve belongs to the
+policy, not to which episodes it happened to get scored on.
 
-**Two checkpoints collapse and recover, and both reproduce.** 4,600,000 scores
-+7.23 and +7.13 between neighbours at +14.60 and +12.14, and 3,600,000 scores +6.19
-and +5.88 between +7.88 and +14.99. These are the same dips that make the plateau
-definition fire falsely, and they are 7 to 9 points deep.
+**Two checkpoints collapse and then recover, and both seeds show it.** 4,600,000
+scores +7.23 and +7.13, between neighbours at +14.60 and +12.14. 3,600,000 scores +6.19
+and +5.88, between +7.88 and +14.99. Both dips are 7 to 9 points deep. The 3,600,000
+one lands inside the stretch where the training plateau definition fired, and a
+trailing mean covering about 250,000 steps can't see a dip that short.
 
-**The training to evaluation gap is structural.** At the final step training read
-+16.80 while the checkpoint scores +12.60 at seed 0 and +12.18 at seed 1, gaps of
--4.20 and -4.62. Run 1's equivalent gap was -4.30, at a reward level 17 points
-lower. Two runs that ended that far apart producing the same gap means the headline
-figure for any run has to come from a sweep rather than from the training log.
+**The gap between training and evaluation looks structural.** At the final step,
+training read +16.80, while the checkpoint scores +12.60 at seed 0 and +12.18 at seed
+1. That's a gap of -4.20 and -4.62. Run 1's gap was -4.30, even though its reward was
+17 points lower. Two runs that ended that far apart still landed on almost the same
+gap. So from here on, a run's headline number has to come from a sweep, not the
+training log.
 
-**Episode length measures how even the game is, not how good the agent is.** The
-longest evaluation episodes in the sweep are at 2,600,000, averaging 5,299 steps
-where the agent scores -0.81, which is the closest sampled point to the crossing.
-The best checkpoint plays episodes of 2,444 steps, less than half that. run-01.md
-offers its rise from 909 to 4,139 steps as evidence of learning, but Run 1 finished
-near parity, which is exactly where this metric peaks. A stronger agent produces a
-lower number, because a 21 to 3 win is shorter than a 21 to 19 grind.
+**Episode length tells you how even the game is, not how good the agent is.** The
+longest evaluation episodes are at 2,600,000, averaging 5,299 steps, where the agent
+scores -0.81. That's the closest sampled point to the crossing. The best checkpoint
+plays 2,444 step episodes, less than half as long. In run-01.md I treated the rise from
+909 to 4,139 steps as evidence of learning. But Run 1 finished close to even, which is
+exactly where this number peaks. A better agent actually gets a lower number, because
+a 21 to 3 win is over faster than a 21 to 19 grind.
 
-**The +18 aspiration is not met.** [PLANS.md](../PLANS.md) sets the bar at a mean
-above 0 and the aspiration at +18 or better. The best checkpoint is +16.97 plus or
-minus 0.21, short by 1.03 points, which is about five standard errors.
+**I didn't reach the +18 aspiration.** [PLANS.md](../PLANS.md) sets the bar at a mean
+above 0 and the aspiration at +18 or better. The best checkpoint is +16.97 plus or minus
+0.21, 1.03 points short, which is about five standard errors.
 
 ---
 
 ## Instrumentation
 
-**The measurement itself does not drift.** The probe is the same 500 states at
-every row, so a change in either Q column can only come from the network. The
-first five rows, steps 0 to 40,000, have zero gradient updates and identical
-values to six decimals, `q_max_mean` 0.034242 and `q_spread_mean` 0.056905.
+`metrics.csv` gets a row every 10,000 env steps. Each row runs the network over the
+same 500 probe states and records the Q values, which action it would pick in each
+state, epsilon, and what the gradient updates in that window sampled from the replay
+buffer.
 
-**`q_max_mean` fell before it rose.** It went below 0 at 140,000 and reached its
-minimum of -0.2180 at 760,000. Rewards are +1 and -1 per point, so a negative value
-means the network expected to lose points from these states. It was above 0 for
-good from 1,570,000, peaked at 0.6686 at 5,980,000 and ended at 0.6521.
+**I checked the logger before trusting anything in it.** `metrics.csv` has all 601
+rows, one every 10,000 steps with none missing. On every row, the six argmax counts add
+up to 500, one per probe state. The probe gets built once before training starts
+([src/train.py](../../src/train.py)) and reused for every row. Regenerating it from
+`PROBE_SEED` gives the same sha256 that `run_config.json` recorded, so every row
+measured the same states. That means any change in the Q columns has to come from the
+network. The first five rows back that up. Steps 0 to 40,000 come before any gradient
+update, and every logged digit is identical: `q_max_mean` 0.034242 and
+`q_spread_mean` 0.056905.
+
+**`q_max_mean` dropped before it climbed.** It went below 0 at 140,000 and bottomed
+out at -0.2180 at 760,000. Rewards are +1 and -1 per point, so a negative value means
+the network expected to lose points from these states. It went above 0 for good at
+1,570,000, peaked at 0.6686 at 5,980,000, and ended at 0.6521.
 
 | Steps | Change in `q_max_mean` |
 |---|---|
@@ -248,30 +263,94 @@ good from 1,570,000, peaked at 0.6686 at 5,980,000 and ended at 0.6521.
 | 3,000,000 to 5,000,000 | +0.3346 |
 | 5,000,000 to 6,000,000 | +0.0066 |
 
-The last 1,000,000 steps added almost nothing, with every row between 0.6118 and
-0.6686.
+The last 1,000,000 steps barely moved it. Every row in that stretch is between 0.6118
+and 0.6686.
 
-**`q_spread_mean` collapsed at the first updates, then grew.** The single update
-logged at step 50,000 took it from 0.0569 to 0.0413, and by 60,000, 2,501 updates
-in, it was 0.0050, its minimum, meaning the network rated all six actions almost
-the same. It peaked at 0.2067 at 2,230,000, and from 3,000,000 on every row sat
-between 0.1401 and 0.2065, averaging 0.1721, ending at 0.1538. These are random
-policy states, as Limitations notes, so both columns describe positions the trained
-agent seldom reaches.
+**`q_spread_mean` collapsed with the first updates, then grew.** The single update
+logged at step 50,000 dropped it from 0.0569 to 0.0413. By 60,000, 2,501 updates in, it
+hit its minimum of 0.0050, meaning the network rated all six actions almost the same.
+It peaked at 0.2067 at 2,230,000. From 3,000,000 on it stayed between 0.1401 and
+0.2065, averaging 0.1721, and it ended at 0.1538. One caveat, which Limitations covers:
+these are states a random policy visits, so both columns describe positions the
+trained agent rarely gets into.
 
-**Did Q spread rise before reward?**
+**Q spread started rising before reward did, by about 520,000 steps.** The analyzer
+defines onset as the first step after a series' minimum where it stays above that
+minimum plus a fraction of its range for the rest of the run. At 5 percent, Q spread
+crosses at 340,000 and the trailing 100 mean at 860,000. The rule was chosen after the
+data had already been looked at, so this is an observation and not a real test. To
+avoid leaning on one threshold, the table shows four:
 
-**Epsilon followed the schedule exactly.** `run_config.json` sets a linear decay
-from 1.0 to 0.01 over 250,000 steps. Every metrics row after step 0 matches that
-line to within 0.00000004, which is rounding at six decimals, and all 575 rows after
-250,000 read exactly 0.01. The row at 250,000 reads 0.010004 because each row is
-written at `env_step`, one past the loop index the epsilon was computed from, so it
-shows the value used for the step before. The floor took effect at step 250,001,
-and the first row that shows it is 260,000.
+| Fraction | Q spread onset | Reward onset | Lead |
+|---|---|---|---|
+| 0.05 | 340,000 | 860,000 | 520,000 |
+| 0.10 | 430,000 | 1,090,000 | 660,000 |
+| 0.20 | 570,000 | 1,650,000 | 1,080,000 |
+| 0.30 | 710,000 | 2,310,000 | 1,600,000 |
 
-**Replay dynamics.**
+Q spread leads at every fraction, but how far it leads depends on the fraction. The
+lead grows as the fraction goes up, because Q spread finishes most of its rise by its
+peak at 2,230,000, while reward keeps climbing to the end. So 520,000, at the lowest
+fraction, is the most honest answer to which one started rising first.
 
-**Paddle direction.**
+**The trained network leans toward moving up, and picks still less than an even
+share.** The argmax counts are grouped by what each action does to the agent's
+paddle. That grouping comes from Check 6 in `scripts/visual_check.py`, which drove each
+action and measured the paddle, since the action names alone don't prove anything: 2
+and 4 move it up, 3 and 5 move it down, 0 and 1 leave it still. With no preference,
+the network would split the 500 states evenly, about 167 per group.
+
+At step 0, all 500 states pick still. The untrained network just happens to rate
+action 0 highest everywhere, so that isn't anything learned. Still dropped to 316
+states by 200,000 and to 20 by 800,000, but it didn't stay down. From 1,000,000 on, the
+200,000 step rows put it between 57 and 176. From 3,000,000 on, the averages were
+213.9 up, 170.0 down and 116.1 still. After 510,000, still reached an even share on
+only seven rows: six between 2,290,000 and 2,650,000, and one at 5,570,000.
+
+These summaries were picked after the 200,000 step table had been seen. As with Q,
+the probe states come from a random policy, so the lean toward up could just reflect
+where the probe happens to put the ball, not a bias in the policy. Grouping RIGHT with
+RIGHTFIRE also means this can't say anything about FIRE.
+
+**Epsilon followed the schedule exactly.** `run_config.json` sets a linear decay from
+1.0 to 0.01 over 250,000 steps. Every metrics row after step 0 matches that line to
+within 0.00000004, which is just rounding at six decimals, and all 575 rows after
+250,000 read exactly 0.01. The one odd value is the row at 250,000, which reads
+0.010004. Each row is written at `env_step`, one past the loop index the epsilon was
+computed from, so the row shows the value from the step before. The floor really took
+effect at step 250,001, and the first row that shows it is 260,000.
+
+**The reward signal per update fell by about four fifths while the agent learned to
+rally, then came partway back once it started winning.** `batch_reward_fraction` is
+the share of transitions sampled in each 10,000 step window where a point was scored.
+`batch_done_fraction` is the share that end an episode. Both count the batches the
+updates actually trained on. Over the 595 windows with a full 2,500 batches, the
+reward fraction peaked at 0.025525 at 540,000, about one point every 40 steps. It fell
+to 0.005387 at 3,160,000 as rallies got longer. From 3,400,000 on, every 200,000 step
+row sits between 0.00914 and 0.01181, and it ended at 0.009787. That late rise lines up
+with the episode length finding in Evaluation: an agent that's winning plays shorter
+games, so points come more often. One thing to keep in mind is that the buffer holds
+the last 100,000 transitions, so these fractions lag the agent's behaviour by up to
+that many steps.
+
+**The batch counters agree with the episode log.** One side always reaches 21, so
+every episode has 42 minus the absolute reward in points. That means the episodes
+inside the buffer's 100,000 step span predict what a uniform sample from it should
+contain. Across the 595 full windows, the logged reward fraction is off from that
+prediction by a mean of +0.06 sampling standard errors, with a spread of 0.94, and 577
+rows land within 2. The done fraction gives +0.02, 1.01 and 572. Pure sampling noise
+would give a mean of 0, a spread of 1 and about 95 percent within 2, which is what
+these look like. So the counters measure what they're supposed to.
+
+| Step | `q_max_mean` | `q_spread_mean` | Up | Down | Still | Reward fraction |
+|---|---|---|---|---|---|---|
+| 0 | 0.0342 | 0.0569 | 0 | 0 | 500 | |
+| 1,000,000 | -0.1384 | 0.1303 | 146 | 263 | 91 | 0.00971 |
+| 2,000,000 | 0.0553 | 0.1879 | 193 | 202 | 105 | 0.00684 |
+| 3,000,000 | 0.3109 | 0.1715 | 198 | 168 | 134 | 0.00592 |
+| 4,000,000 | 0.4993 | 0.1825 | 217 | 163 | 120 | 0.00989 |
+| 5,000,000 | 0.6455 | 0.1697 | 214 | 182 | 104 | 0.00918 |
+| 6,000,000 | 0.6521 | 0.1538 | 227 | 164 | 109 | 0.00979 |
 
 ---
 
@@ -291,33 +370,32 @@ and the first row that shows it is 260,000.
 | GPU samples | 827, spanning 6.89 hours |
 | Checkpoints | 121 files, 3.03 GiB (3.26 GB), measured on disk |
 
-**The GPU was not the bottleneck.** 42 percent peak utilization and 41.3 W on a
-card rated near 160 means the limit is the CPU side: one Pong instance, frame
-preprocessing, and the per step Python loop. The fill phase runs the same emulator
-and preprocessing with no gradient updates in it and managed 844.4 steps per
-second, against 240.7 once updates started.
+**The GPU wasn't the bottleneck.** It never went above 42 percent utilization or 41.3
+W, on a card rated around 160. So the limit is on the CPU side: one Pong instance,
+frame preprocessing, and the Python loop running every step. The fill phase runs the
+same emulator and preprocessing without any gradient updates, and it hit 844.4 steps
+per second, against 240.7 once updates started.
 
-**The logger covered the whole run.** Its 827 timestamps run from 11:48:51 to
-18:42:33, starting 31 seconds before the run and continuing past its end, and the
-gaps between consecutive samples range only 30.031 to 30.123 seconds, so nothing
-was dropped. Run 1's first attempt produced a zero byte file because
-`nvidia-smi -l 30 -f` buffered its output, so this is the check that the
-`Add-Content` replacement writes continuously.
+**The GPU logger covered the whole run.** Its 827 timestamps go from 11:48:51 to
+18:42:33. It started 31 seconds before the run and kept going after it ended. The gaps
+between samples only range from 30.031 to 30.123 seconds, so nothing got dropped. Run
+1's first attempt gave me a zero byte file, because `nvidia-smi -l 30 -f` buffered its
+output. This is the proof that the `Add-Content` replacement writes as it goes.
 
-**The instrumentation's cost is below what the measurement resolves.** The
-instrumented warmup in [run-02-warmup/](run-02-warmup/) ran at 256.1 steps per
-second against the uninstrumented warmup in [run-00-warmup/](run-00-warmup/) at
-252.1, so the instrumented one was faster, which is run to run variation rather
-than a cost. The projection built on 256.1 was 6.47 hours for 6,000,000 steps, and
-the run took 6.88. That 6.3 percent miss is the rate not holding, not the
-arithmetic: 256.1 against the actual 240.7 is 6.4 percent, which is the same gap.
+**The instrumentation costs less than I can measure.** The instrumented warmup in
+[run-02-warmup/](run-02-warmup/) ran at 256.1 steps per second, and the uninstrumented
+one in [run-00-warmup/](run-00-warmup/) ran at 252.1. So the instrumented one was
+actually faster, which is just run to run variation. My projection from 256.1 was 6.47
+hours for 6,000,000 steps, and the run took 6.88. That 6.3 percent miss comes from the
+rate not holding up, not from bad arithmetic: 256.1 against the actual 240.7 is 6.4
+percent, the same gap.
 
-**Run 2 ran 3.3 percent slower than Run 1 and the logs do not say why.** 240.7
-against 248.9 post warmup, while the fill phase was slightly faster at 844.4
-against 837.3. The instrumentation is far too small to account for it: 601 probe
-rows of 500 states is 300,500 forward passes, against roughly 95 million in the
-training batches. Run 2 also ran cooler at a lower peak clock, 1,545 MHz against
-1,770 and 41.3 W against 51.27, so whatever differed was on the CPU side.
+**Run 2 ran 3.3 percent slower than Run 1, and I can't tell why from the logs.** It
+averaged 240.7 against Run 1's 248.9 after warmup, while its fill phase was slightly
+faster, at 844.4 against 837.3. The instrumentation is way too small to explain it.
+601 probe rows of 500 states is 300,500 forward passes, against roughly 95 million in
+the training batches. Run 2 also ran cooler, with a lower peak clock of 1,545 MHz
+against 1,770 and 41.3 W against 51.27. So whatever was different was on the CPU side.
 
 ---
 
@@ -350,44 +428,66 @@ reward and length. If they differ, the clip is played on CPU and the same check 
 applied there. If CPU also disagrees with itself, nothing is recorded until the cause
 is found.
 
+**Outcome.** I applied the rules after committing them, and `analyze_run.py` applies
+them again every time it runs:
+
+| Milestone | Checkpoint | Evidence |
+|---|---|---|
+| Random | 0 | The untrained network |
+| First rally | 600,000 | Mean episode length 1,324 steps against step 0's 837, beating it by 487 against a bar of 95.4 |
+| First over the bar | 2,800,000 | Seed 0 mean +5.45 |
+| Trained | 5,400,000 | Seed 0 mean +16.97, seed 1 +16.67 |
+
+All four are different checkpoints, so the slider keeps four positions. 200,000 and
+400,000 didn't count as a first rally, because their episodes were actually shorter
+than step 0's, at 764 and 769 steps. The episode check, playing each clip twice, comes
+when I record the clips.
+
 ---
 
 ## Limitations
 
-**The training run is a single seed.** The evaluation replicates at two seeds and
-agrees to 0.29 points on average, so every figure in the Evaluation section
-measures this policy reliably. That says nothing about whether a second 6,000,000
-step run would also reach +16.97. Run 1 and Run 2 ran identical config at the same
-seed and sat 11.32 points apart at step 2,000,000, so the spread between runs is
-large and nothing here measures it at this run's length.
+**The training run is a single seed.** The evaluation repeats at two seeds and agrees
+to 0.29 points on average, so everything in the Evaluation section measures this
+policy reliably. But it says nothing about whether a second 6,000,000 step run would
+also get to +16.97. Run 1 and Run 2 used identical config and the same seed, and they
+were still 11.32 points apart at step 2,000,000. So runs can vary a lot, and nothing
+here measures how much at this length.
 
-**The probe measures states a random policy visits.**
+**The probe only covers states a random policy visits.**
 [src/probe.py](../../src/probe.py) builds its 500 states by stepping with
-`env.action_space.sample()`, so they are early game positions with short rallies
-and the ball rarely returned. That is deliberate, because a fixed yardstick has to
-be independent of the policy it measures, but it means the Q figures describe
-states the trained agent seldom reaches rather than the ones it plays from.
+`env.action_space.sample()`, so they're early game positions with short rallies where
+the ball rarely comes back. That's on purpose, because a fixed yardstick has to be
+independent of the policy it's measuring. The downside is that the Q figures describe
+states the trained agent rarely sees, not the ones it actually plays from.
 
-**Only 31 of the 121 checkpoints were scored.** The sweep ran every 200,000 steps,
-so 90 checkpoints between the sampled ones were never evaluated. The best
-checkpoint is therefore the best of those 31, and a better one could sit between
-two of them.
+**The run didn't record its software versions.** The venv I launched it from has Python
+3.11.0, torch 2.12.1+cu126 with CUDA 12.6, gymnasium 1.3.0, ale-py 0.12.0 and numpy
+2.4.6, all installed on 2026-06-20 and unchanged since. So these are very likely what
+it ran on. Runs from now on record them in `run_config.json`.
+
+**Only 31 of the 121 checkpoints were scored.** The sweep ran every 200,000 steps, so
+the 90 checkpoints in between were never evaluated. The best checkpoint is the best of
+those 31, and a better one could be sitting between two of them.
 
 ---
 
 ## Reproducing the figures
 
 Every number above that comes from Run 2's own files comes out of one command, run
-from the repository root. That covers the config, training, evaluation,
-instrumentation and hardware figures:
+from the repository root. That includes the config, training, evaluation,
+instrumentation, hardware and clip selection figures, along with the rescore in
+`eval_lengths.csv` and each clip rule's pick:
 
 ```powershell
 python scripts/analyze_run.py docs/runs/run-02
 ```
 
-Standard errors are `std_reward` over 10, the root of 100 episodes. The checkpoint
-count and size print only on the machine that holds the checkpoints, since they are
-read from `output_dir` in `run_config.json`.
+Standard errors are `std_reward` over 10, the square root of 100 episodes. The
+checkpoint count and size only print on the machine that has the checkpoints, since
+they're read from `output_dir` in `run_config.json`. Two figures need other commands.
+The software versions in Limitations come from the venv, since the run didn't record
+them, and the probe hash match comes from the command at the end of this section.
 
 Every comparison with Run 1 comes from the same command with `--compare`:
 
@@ -395,18 +495,36 @@ Every comparison with Run 1 comes from the same command with `--compare`:
 python scripts/analyze_run.py docs/runs/run-02 --compare docs/runs/run-01
 ```
 
-Re running the sweep itself is the one thing this repo cannot do. `sweep_eval.py`
-needs a `checkpoints/` folder inside the run directory it is given, and those
-3.03 GiB are not committed, so the only directory that works is the one on the
-machine that produced the run. The two seeds took 189.65 and 190.52 minutes.
+The one thing this repo can't do is rerun the sweep itself. `sweep_eval.py` needs a
+`checkpoints/` folder inside the run directory you give it, and those 3.03 GiB aren't
+committed, so it only works on the machine that produced the run. The two seeds took
+189.65 and 190.52 minutes.
+
+Both sweeps were written before the sweep added its `std_episode_steps` column. It
+refuses to append to a file with different columns, so a rerun needs a new `--out`:
 
 ```powershell
-python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000
-python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --seed 1 --out ~/pong-runs/run-02/eval_seed1.csv
+python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --out $HOME\pong-runs\run-02\eval_rerun.csv
+python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --seed 1 --out $HOME\pong-runs\run-02\eval_seed1_rerun.csv
 ```
 
-The 256.1 steps per second the projection was built on comes from the warmup pass,
-and comparing against it gives the 6.47 hour projection and the 6.3 percent miss:
+The first rally rule in Clip selection uses
+[run-02/eval_lengths.csv](run-02/eval_lengths.csv), a rescore of checkpoints 0 to
+1,000,000 that adds the spread of episode length. It ran at commit `a6ce59e` plus the
+`std_episode_steps` column and `--through` option, which weren't committed yet.
+[run-02/eval_lengths_config.json](run-02/eval_lengths_config.json) records that as
+`git_dirty`. Its mean reward, reward spread and mean episode length match `eval.csv`
+exactly on all six checkpoints. It took 17.9 minutes:
+
+```powershell
+python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --through 1000000 --out $HOME\pong-runs\run-02\eval_lengths.csv
+```
+
+In PowerShell, use `$HOME` instead of `~`. PowerShell passes `~` to the script as is,
+and the script doesn't expand it.
+
+The 256.1 steps per second my projection used comes from the warmup pass. Comparing
+against it gives the 6.47 hour projection and the 6.3 percent miss:
 
 ```powershell
 python scripts/analyze_run.py docs/runs/run-02 --compare docs/runs/run-02-warmup
@@ -415,10 +533,9 @@ python scripts/analyze_run.py docs/runs/run-02 --compare docs/runs/run-02-warmup
 The 252.1 for the uninstrumented warmup comes from
 `python scripts/analyze_run.py docs/runs/run-00-warmup`.
 
-The probe is not committed either, and regenerates from `PROBE_SEED` to the sha256
+The probe isn't committed either. It regenerates from `PROBE_SEED` to the sha256
 recorded in `run_config.json`:
 
 ```powershell
 python -c "from src.probe import make_probe, probe_hash; print(probe_hash(make_probe()))"
 ```
-

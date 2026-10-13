@@ -1,19 +1,19 @@
 # Run 1
 
-The first real training run. Every figure here except the checkpoint count and size
-comes from the run's own `run_config.json`, `episodes.csv`, `gpu_log.csv` and the two
-evaluation files, all committed in [run-01/](run-01/) alongside the warmup pass's
-three files in [run-00-warmup/](run-00-warmup/), so every number here can be checked.
-The commands that produce them are at the bottom. The checkpoints themselves
-are not committed at 1.02 GB, so their count and size are measured on disk instead.
+My first real training run. Every number here comes from the run's own files, which
+are committed in [run-01/](run-01/): `run_config.json`, `episodes.csv`, `gpu_log.csv`
+and the two evaluation files. The warmup pass's three files are in
+[run-00-warmup/](run-00-warmup/). The commands that produce every number are at the
+bottom. The checkpoints aren't committed, at 1.02 GiB (1.09 GB), so I measured their
+count and size on disk.
 
 **Output:** `run-01` under `RUNS_ROOT`, which [src/run_paths.py](../../src/run_paths.py)
 resolves to `~/pong-runs`, outside the OneDrive sync root.
 
-**Commit:** `afb91fae0b1c1408009cb5385980f432c99f7ec7`, with `git_dirty` false, so
-the run launched from committed code. The warmup pass ran from
-`f9ce3b66d9a8c41105676bba87ae8453d4e9cb82`, and the two differ in documentation
-only, so everything the warmup verified applies to this run unchanged. Check with
+**Commit:** `afb91fae0b1c1408009cb5385980f432c99f7ec7`, with `git_dirty` false, so the
+run launched from committed code. The warmup pass ran from
+`f9ce3b66d9a8c41105676bba87ae8453d4e9cb82`. The two only differ in documentation, so
+everything the warmup verified still applies to this run. You can check with
 `git diff --stat f9ce3b6 afb91fa`.
 
 **Started:** 2026-10-08 13:55:35. **Wall clock:** 2.19 hours.
@@ -23,11 +23,11 @@ only, so everything the warmup verified applies to this run unchanged. Check wit
 ## Pre registration
 
 Quoted verbatim from the 2026-10-06 entry in [sessions.md](../sessions.md), commit
-`03b99133acc6ef509f60952baf9b229f24ee224c` of Oct 6 at 18:10, and copied into this
-file on Oct 10. That commit is two days before Run 1 launched at Oct 8 13:55, which
-is what proves the prediction predates the data.
+`03b99133acc6ef509f60952baf9b229f24ee224c` of Oct 6 at 18:10. I copied it into this
+file on Oct 10. That commit is two days before Run 1 launched on Oct 8 at 13:55,
+which is what proves the prediction came before the data.
 
-Three items, as written then rather than as I would write them now:
+Three items, as I wrote them then rather than how I'd write them now:
 
 > Rewrote the pre registered prediction so it can fail. A plateau is the trailing
 > mean over the last 100 episodes moving less than 1.0 across 200 episodes. It
@@ -61,15 +61,15 @@ Three items, as written then rather than as I would write them now:
 | Device | NVIDIA GeForce RTX 2060 |
 | Action space | 6 |
 
-The reasoning behind each value is in the 2026-10-06 entry of
+My reasoning for each value is in the 2026-10-06 entry of
 [sessions.md](../sessions.md).
 
 ---
 
 ## Result
 
-**The agent did not reach the bar.** The trailing mean over the last 100 episodes
-never exceeded 0. Its best and final value are both -0.11, at step 1,999,498.
+**The agent didn't reach the bar.** The trailing mean over the last 100 episodes never
+got above 0. Its best and final value are both -0.11, at step 1,999,498.
 
 | Step | Trailing 100 mean |
 |---|---|
@@ -84,47 +84,47 @@ never exceeded 0. Its best and final value are both -0.11, at step 1,999,498.
 | 1,800,000 | -2.67 |
 | 1,999,498 | -0.11 |
 
-Each row is the nearest episode boundary to that step, since the trailing mean only
-exists where an episode ended. The last row is the run's final boundary, 502 steps
+The trailing mean only exists where an episode ended, so each row is the nearest
+episode boundary to that step. The last row is the run's final boundary, 502 steps
 short of 2,000,000.
 
-1,293 episodes, 487,375 gradient updates at the last logged episode. These are
-training episodes at epsilon 0.01, not the 100 episode evaluation the bar is
-defined over. The two will be close at this epsilon but they are not the same
+The run had 1,293 episodes and 487,375 gradient updates by the last logged episode.
+These are training episodes at epsilon 0.01, not the 100 episode evaluation the bar is
+defined over. The two should be close at this epsilon, but they aren't the same
 measurement.
 
-**My pre registered prediction failed.** On 2026-10-06 I predicted the trailing
-mean would cross 0 before step 1.2M. At 1.2M it was -10.17, and by the terms I
-wrote there, still being below 0 at 1.2M means the schedule is insufficient.
+**My pre registered prediction failed.** On 2026-10-06 I predicted the trailing mean
+would cross 0 before step 1.2M. At 1.2M it was -10.17. By the terms I wrote, still
+being below 0 at 1.2M means the schedule is insufficient.
 
-**My pre run estimate also failed.** Before reading the rows I predicted a
-positive end of run reward around +10. Actual -0.11.
+**My estimate before the run failed too.** Before I looked at any rows, I predicted
+the run would end with positive reward, around +10. It ended at -0.11.
 
-**The curve was still climbing at the final step.** It gained 2.56 points across
-the last 200,000 steps and shows no flattening, so by my own plateau definition, a
-trailing mean moving less than 1.0 across 200 episodes, this run never plateaued.
+**The curve was still climbing at the last step.** It gained 2.56 points over the
+last 200,000 steps with no sign of flattening. My plateau definition is a trailing mean
+moving less than 1.0 across 200 episodes, and by that definition it never plateaued.
 
-**Supporting evidence that the learning is real rather than noise:**
+**Supporting evidence that the learning is real, not noise:**
 
-- Mean episode length went from 909 steps over the first 100 episodes to 4,139
-  over the last 100, so rallies are four and a half times longer.
-- Zero shutouts in the last 100 episodes, against a start where every episode was
-  a 21 to 0 or 21 to 2 loss.
-- Mean loss per episode fell from 0.012179 to 0.001716, staying finite throughout,
+- Mean episode length went from 909 steps over the first 100 episodes to 4,139 over
+  the last 100. Rallies got four and a half times longer.
+- There were zero shutouts in the last 100 episodes. At the start, every episode was a
+  21 to 0 or 21 to 2 loss.
+- Mean loss per episode fell from 0.012179 to 0.001716. It stayed finite the whole run,
   ranging 0.000189 to 0.013204.
 
-Two candidate explanations for stopping short: the frame budget, 8,000,000 frames
-against Nature's 50,000,000, and the replay buffer at 100,000 against Nature's
-1,000,000. The curve's shape favours the frame budget, since a buffer limitation
-would tend to flatten the curve rather than leave it climbing.
+I can think of two reasons it stopped short. One is the frame budget: 8,000,000 frames
+against Nature's 50,000,000. The other is the replay buffer, at 100,000 against
+Nature's 1,000,000. The shape of the curve points to the frame budget. A buffer that's
+too small would tend to flatten the curve, not leave it still climbing.
 
 ---
 
 ## Evaluation
 
-The figures above are training episodes at epsilon 0.01. The bar is defined over
-100 evaluation episodes, so every checkpoint was scored separately at epsilon 0.05,
-in [run-01/eval.csv](run-01/eval.csv).
+Everything above is training episodes at epsilon 0.01. The bar is defined over 100
+evaluation episodes, so I scored every checkpoint separately at epsilon 0.05, in
+[run-01/eval.csv](run-01/eval.csv).
 
 | Step | Eval mean | Training trailing 100 | Eval minus training |
 |---|---|---|---|
@@ -140,12 +140,12 @@ in [run-01/eval.csv](run-01/eval.csv).
 | 1,800,000 | **-1.63** | -2.67 | +1.04 |
 | 2,000,000 | -4.41 | -0.11 | -4.30 |
 
-**No checkpoint meets the bar.** The best is -1.63 at step 1,800,000.
+**No checkpoint reaches the bar.** The best is -1.63 at step 1,800,000.
 
-**The best checkpoint is not the last one.** 1,800,000 beats 2,000,000 by 2.78
-points, so the policy got worse over the final 200,000 steps. Both were scored again
-at seed 1 on independent episodes, in
-[run-01/eval_seed1.csv](run-01/eval_seed1.csv), and the result held:
+**The best checkpoint isn't the last one.** 1,800,000 beats 2,000,000 by 2.78 points,
+so the policy actually got worse over the last 200,000 steps. I scored both again at
+seed 1 on independent episodes, in [run-01/eval_seed1.csv](run-01/eval_seed1.csv), and
+the result held:
 
 | Step | Seed 0 | Seed 1 | Std at seed 1 |
 |---|---|---|---|
@@ -153,30 +153,30 @@ at seed 1 on independent episodes, in
 | 1,800,000 | -1.63 | -1.89 | 4.43 |
 | 2,000,000 | -4.41 | -4.54 | 3.16 |
 
-With 100 episodes those standard deviations give standard errors of 0.44 and 0.32,
-so the 2.65 point gap at seed 1 is about 5 combined standard errors. The means also
-moved by only 0.26 and 0.13 between seeds, well inside those errors. So this is
-checkpoint oscillation rather than evaluation noise, and 1,800,000 is genuinely the
-better policy rather than the luckier measurement.
+With 100 episodes, those standard deviations give standard errors of 0.44 and 0.32.
+So the 2.65 point gap at seed 1 is about 5 combined standard errors. The means also
+only moved by 0.26 and 0.13 between seeds, well inside those errors. So this is the
+checkpoints actually oscillating, not evaluation noise, and 1,800,000 really is the
+better policy, not just the luckier measurement.
 
-**2,000,000 is both worse and less variable**, standard deviation 3.16 against
-4.43. It loses more consistently, where 1,800,000 sometimes wins by more.
+**2,000,000 is worse and also less variable**, with a standard deviation of 3.16
+against 4.43. It loses more consistently, while 1,800,000 sometimes wins by more.
 
-**The two curves cross, and both lag effects show up.** Evaluation runs above
-training from 800,000 to 1,600,000, peaking at 5.00 points at 1,000,000, then falls
-4.30 below it at the end. The training trailing mean covers roughly the last
-400,000 steps, so it averages a changing policy rather than measuring the final
-one: while the policy is improving that understates it, and at the end, where the
-policy regressed, it overstates it. The extra exploration at epsilon 0.05 pushes
-evaluation down throughout.
+**The two curves cross, and you can see the lag both ways.** Evaluation sits above
+training from 800,000 to 1,600,000, by as much as 5.00 points at 1,000,000, then ends
+4.30 below it. The training trailing mean covers roughly the last 400,000 steps, so it
+averages a policy that's changing instead of measuring the final one. While the policy
+is improving, that makes it look worse than it is. At the end, where the policy got
+worse, it makes it look better. The extra exploration at epsilon 0.05 also pulls
+evaluation down the whole way.
 
-That is why training reported -0.11 at the final step while the final policy scores
--4.41. The number I quoted as Run 1's result was never a measurement of the policy
-the run finished with.
+That's why training said -0.11 at the final step while the final policy scores -4.41.
+The number I quoted as Run 1's result never actually measured the policy the run ended
+with.
 
-**The eleven rows in `eval.csv` predate the provenance work**, so they carry no
-commit hash, no standard deviation, and no seed column. They were produced at seed
-0. The seed 1 rows have a full sidecar in
+**The eleven rows in `eval.csv` came before I added provenance tracking.** So they
+have no commit hash, no standard deviation and no seed column. They were produced at
+seed 0. The seed 1 rows have a full sidecar in
 [run-01/eval_seed1_config.json](run-01/eval_seed1_config.json).
 
 ---
@@ -195,43 +195,43 @@ commit hash, no standard deviation, and no seed column. They were produced at se
 | Power draw | 9.6 to 51.3 W |
 | GPU utilization | 3 to 42 percent |
 | VRAM used | 1,154 to 2,266 MiB of 6,144 |
-| Checkpoints | 41 files, 1.02 GB, measured on disk |
+| Checkpoints | 41 files, 1.02 GiB (1.09 GB), measured on disk |
 
-**The GPU was not the bottleneck.** 42 percent peak utilization and 51 W on a card
-rated near 160 means the limit is the CPU side: one Pong instance, frame
-preprocessing, and the per step Python loop. The fill phase before training began
-ran at 837.3 steps per second with no GPU work in it, against 248.9 once updates
+**The GPU wasn't the bottleneck.** It never went above 42 percent utilization or 51 W,
+on a card rated around 160. So the limit is on the CPU side: one Pong instance, frame
+preprocessing, and the Python loop running every step. The fill phase before training
+ran at 837.3 steps per second with no GPU work at all, against 248.9 once updates
 started.
 
-The warmup pass understated the load, peaking at 52 °C, 1,290 MHz and 30 W,
-because it never ran long enough to reach steady state. The limits were still
-nowhere near reached.
+The warmup pass understated the load, peaking at 52 °C, 1,290 MHz and 30 W, because it
+never ran long enough to warm up fully. Even so, nothing got close to the limits.
 
 ---
 
 ## Reproducing the figures
 
-Every training and hardware number above comes out of one command, run from the
-repository root:
+Every training, evaluation and hardware number above comes out of one command, run
+from the repository root:
 
 ```powershell
 python scripts/analyze_run.py docs/runs/run-01
 ```
 
-The evaluation numbers are read straight out of [run-01/eval.csv](run-01/eval.csv)
-and [run-01/eval_seed1.csv](run-01/eval_seed1.csv).
-
-Re running the sweep itself is the one thing this repo cannot do. `sweep_eval.py`
-needs a `checkpoints/` folder inside the run directory it is given, and those
-1.02 GB are not committed, so the only directory that works is the one on the
-machine that produced the run. The sweep takes about 50 minutes:
+The one thing this repo can't do is rerun the sweep itself. `sweep_eval.py` needs a
+`checkpoints/` folder inside the run directory you give it, and those 1.02 GiB aren't
+committed, so it only works on the machine that produced the run. The sweep takes about
+50 minutes. `eval.csv` was written before the sweep's current columns, and the sweep
+refuses to append to a file with different columns, so a rerun needs a new `--out`:
 
 ```powershell
-python scripts/sweep_eval.py ~/pong-runs/run-01 --every 200000
+python scripts/sweep_eval.py $HOME\pong-runs\run-01 --every 200000 --out $HOME\pong-runs\run-01\eval_rerun.csv
 ```
 
-The warmup pass's own figures, including the 252.1 steps per second the projection
-was built on, come from the analyzer pointed at the other directory:
+In PowerShell, use `$HOME` instead of `~`. PowerShell passes `~` to the script as is,
+and the script doesn't expand it.
+
+The warmup pass's own figures, including the 252.1 steps per second my projection
+used, come from the analyzer pointed at the other directory:
 
 ```powershell
 python scripts/analyze_run.py docs/runs/run-00-warmup
