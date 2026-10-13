@@ -513,7 +513,8 @@ The first rally rule in Clip selection uses
 1,000,000 that adds the spread of episode length. It ran at commit `a6ce59e` plus the
 `std_episode_steps` column and `--through` option, which weren't committed yet.
 [run-02/eval_lengths_config.json](run-02/eval_lengths_config.json) records that as
-`git_dirty`. Its mean reward, reward spread and mean episode length match `eval.csv`
+`git_dirty`. They were committed afterward in `63ea0da`, along with one later edit that
+doesn't affect scoring: recording the software versions in the sweep's config. Its mean reward, reward spread and mean episode length match `eval.csv`
 exactly on all six checkpoints. It took 17.9 minutes:
 
 ```powershell
