@@ -619,7 +619,7 @@ Floor met, all three items. Aspiration half closed: the +18 question is settled,
 - Committed the Run 2 warmup's three logs, 9.6 KB, matching `run-00-warmup`. That restored two figures I had cut as unverifiable: 256.1 steps per second and the 6.47 hour projection.
 - Fixed run-01.md's prose, which gave 809 and 252 as Run 1's fill and post warmup rates when both belong to `run-00-warmup` and Run 1's own are 837.3 and 248.9.
 - Both run files told a reader to run `sweep_eval.py <run_dir>`, which nothing in the repo satisfies, since it reads `<run_dir>/checkpoints/`. Both now name the directory that holds them.
-- Removed 30 prose hyphens and 2 semicolons from the June through August entries, which predate the style the later ones follow.
+
 
 ## What's open (carrying forward)
 
