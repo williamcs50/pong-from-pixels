@@ -689,7 +689,7 @@ The floor has been met. Item 2 is reported as an observation, since the rule was
 - Recording the four clips, in the Oct 15 block. No script records video yet, and each clip has to pass the play twice check from run-02.md's Clip selection before it counts. The test clip from today's aspiration carries forward with it.
 - The README is out of date. It doesn't mention Run 2's result, the evaluation sweep (`sweep_eval.py`, built on `evaluate.py`), `analyze_run.py --compare`, or how to run the tests, and it only lists half the files a run writes.
 - `architecture.md` names 8 of 19 modules, and nothing from training, evaluation, or instrumentation. The internal modules belong there, not in the README.
-- The lean toward up in the paddle counts isn't explained. It could come from where the probe puts the ball, and nothing checks that yet.
+- The trained network picks "up" more than "down" on the probe states. From 3,000,000 on it averaged 213.9 up against 170.0 down, where an even split would be about 167 each. That might not be a bias in the policy. The probe states come from random play, so if the ball happens to sit above the agent's paddle in most of them, moving up is just the right answer. Checking it means finding the ball and paddle in each of the 500 probe frames, which `visual_check.py` can already locate, and seeing whether up wins mostly where the ball is above the paddle.
 
 ## Anything surprising or worth flagging
 
