@@ -3,8 +3,8 @@
 The first real training run. Every figure here except the checkpoint count and size
 comes from the run's own `run_config.json`, `episodes.csv`, `gpu_log.csv` and the two
 evaluation files, all committed in [run-01/](run-01/) alongside the warmup pass's
-three files in [run-00-warmup/](run-00-warmup/), so the numbers can be checked rather
-than taken on trust. The commands that produce them are at the bottom. The checkpoints themselves
+three files in [run-00-warmup/](run-00-warmup/), so every number here can be checked.
+The commands that produce them are at the bottom. The checkpoints themselves
 are not committed at 1.02 GB, so their count and size are measured on disk instead.
 
 **Output:** `run-01` under `RUNS_ROOT`, which [src/run_paths.py](../../src/run_paths.py)
@@ -219,11 +219,15 @@ python scripts/analyze_run.py docs/runs/run-01
 ```
 
 The evaluation numbers are read straight out of [run-01/eval.csv](run-01/eval.csv)
-and [run-01/eval_seed1.csv](run-01/eval_seed1.csv). Reproducing them from the
-checkpoints, which are not committed, takes about 50 minutes for the full sweep:
+and [run-01/eval_seed1.csv](run-01/eval_seed1.csv).
+
+Re running the sweep itself is the one thing this repo cannot do. `sweep_eval.py`
+needs a `checkpoints/` folder inside the run directory it is given, and those
+1.02 GB are not committed, so the only directory that works is the one on the
+machine that produced the run. The sweep takes about 50 minutes:
 
 ```powershell
-python scripts/sweep_eval.py <run_dir> --every 200000
+python scripts/sweep_eval.py ~/pong-runs/run-01 --every 200000
 ```
 
 The warmup pass's own figures, including the 252.1 steps per second the projection

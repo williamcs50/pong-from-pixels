@@ -606,8 +606,41 @@ Aspiration closed. Floor not met: Run 2 was held at the 5:30 cutoff on purpose r
 
 ## What landed today
 
+Floor met, all three items. Aspiration half closed: the +18 question is settled, the four clip checkpoints are not picked.
+
+- Copied Run 2's eight logs into `docs/runs/run-02/`, 296 KB, every file checked by sha256 against its source. `probe.npy` stayed out at 13.5 MB and the 121 checkpoints at 3.03 GB, as Run 1 did.
+- Wrote run-02.md. Seven sections matching run-01.md: header, Config, Results, Evaluation, Throughput and hardware, Limitations, Reproducing the figures.
+- Scored the three pre registered predictions. The crossing failed at 2,715,875 against a 2,300,000 bound. The plateau definition fired falsely. 17 of 31 checkpoints cleared the bar at seed 0 and 18 at seed 1, best +16.97 at step 5,400,000.
+- Ran the seed 1 sweep, 31 checkpoints in 190.5 minutes against 189.6 at seed 0. The seeds agree to 0.29 points on average and not one of the 31 differs by more than two standard errors, so the curve's dips are the policy rather than the measurement.
+- Settled the +18 question in 11 minutes instead of 80 by scoring 5,450,000 and 5,500,000, the two bracketing the training peak, at +16.61 and +16.38, so the 200,000 grid stepped over nothing better and PLANS.md's aspiration is missed by 1.03 points.
+- Added Check 6 to `visual_check.py`, which drives each action and reads the paddle's row. RIGHT and RIGHTFIRE move it up, LEFT and LEFTFIRE down, NOOP and FIRE not at all, each pair landing on an identical row, and four asserts fail if that stops holding. Closes the driven rollout carried since Oct 3.
+- Turned sticky actions off in `visual_check.py`, `check_environment.py`, `smoke_test.py` and `random_agent.py`, which ran at the v5 default of 0.25 while training ran at 0.0. The seeded episode now ends at step 946 rather than 1100.
+- Gave `visual_check.py` a pass summary that exits 1. Checks 3 and 4 report by printing rather than raising, so a bare "all passed" line would have printed straight over a MISMATCH.
+- Committed the Run 2 warmup's three logs, 9.6 KB, matching `run-00-warmup`. That restored two figures I had cut as unverifiable: 256.1 steps per second and the 6.47 hour projection.
+- Fixed run-01.md's prose, which gave 809 and 252 as Run 1's fill and post warmup rates when both belong to `run-00-warmup` and Run 1's own are 837.3 and 248.9.
+- Both run files told a reader to run `sweep_eval.py <run_dir>`, which nothing in the repo satisfies, since it reads `<run_dir>/checkpoints/`. Both now name the directory that holds them.
+- Removed 30 prose hyphens and 2 semicolons from the June through August entries, which predate the style the later ones follow.
+
 ## What's open (carrying forward)
 
+- **run-02.md has no Instrumentation section.** `metrics.csv` is committed at 87.5 KB, the probe is described in six places, and not one Q figure is reported. That was the whole point of Run 2.
+- The four clip checkpoints for the Oct 15 block. 5,400,000 is the trained milestone, confirmed at both seeds.
+- `architecture.md` names 8 of 19 modules and nothing from the training phase, including `train.py`.
+- The README does not mention `sweep_eval.py`, the tool that now produces every headline number.
+- No test covers the sweep, `git_info.py`, the instrumentation, logging or checkpointing. Still five things verified by hand.
+- `check_environment.py` says the optimizer state and the activation peak cannot be measured yet. Both are known now, about 12.9 MB from the checkpoint sizes and 1,047 to 2,287 MiB from a run's GPU log.
+- `analyze_run.py` prints neither the fill phase rate nor the step of the best trailing mean, and both run write ups want them.
+- Carried unchanged: `run_config.json` records no torch version or interpreter.
+
 ## Anything surprising or worth flagging
+
+- A fixed seed does not reproduce a run on this hardware. Run 1 and Run 2 are byte identical for 54 episodes, first differ at episode 55 where the first gradient update lands, and sit 11.32 points apart by step 2,000,000. That is why prediction 1 failed, and the failure is worth more than the prediction would have been.
+- The best checkpoint is not the last one for the third time, with 5,400,000 beating 6,000,000 by 4.37 points at 13.3 combined standard errors, and by 4.49 at 12.6 at seed 1.
+- The training to evaluation gap replicated at -4.20 and -4.62 against Run 1's -4.30, at reward levels 17 points apart. It is structural, so a headline number has to come from a sweep rather than the training log.
+- The plateau definition reported stability across a window where evaluation swung 8.80 points. Defined on the training curve, it cannot see that, so Run 3's version has to be defined on evaluation.
+- Episode length measures how even the game is, not how good the agent is. The longest evaluation episodes are 5,299 steps at 2,600,000 where the agent scores -0.81, against 2,444 at the best checkpoint. run-01.md offers its rise from 909 to 4,139 as evidence of learning, and it is evidence of reaching parity instead.
+- Four figures in the run-02.md draft were wrong, and auditing every one against the committed files caught them before the file was committed. The ones sampled from a 12 row table while the run was going broke, and the ones computed over the whole file held.
+- `visual_check.py` had been checking a different game than the one that trains. Floor 2 on Oct 7 aligned its action selection and seeding with the training code and missed sticky actions, which is the larger difference.
+- RIGHT moves the paddle up. The action names are about the joystick, not the screen, which is why this needed measuring rather than reading.
 
 ---
