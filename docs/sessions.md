@@ -645,7 +645,7 @@ Floor met, all three items. Aspiration half closed: the +18 question is settled,
 
 ---
 
-# Tuesday: Tuesday: Instrumentation and Clip Picks
+# Tuesday: Instrumentation and Clip Picks
 
 **Date:** 2026-10-13
 
@@ -656,9 +656,9 @@ Floor met, all three items. Aspiration half closed: the +18 question is settled,
    - **Epsilon as logged:** the `epsilon` column, including the step where it first hits 0.01.
    - **Replay dynamics:** `batch_reward_fraction` (share of sampled transitions where a point was scored) and `batch_done_fraction` (share that end an episode), and how both change as rallies get longer.
    - **Paddle direction:** the six `argmax_count` columns, grouped by what each action does on screen. On Oct 12, `visual_check.py` measured that actions 2 and 4 move the paddle up, 3 and 5 move it down, and 0 and 1 leave it still.
-2. **Test whether Q spread moved before reward did** The Oct 12 analysis suggested `q_spread_mean` started rising about 450,000 steps before the trailing 100 reward mean in `episodes.csv` did, but that was never written down or checked. Before computing anything, write down one rule for "the step where a series starts rising", apply it to both series, and decide what result would mean the claim is false. Report the result either way.
+2. **Test whether Q spread moved before reward did.** The Oct 12 analysis suggested `q_spread_mean` started rising about 450,000 steps before the trailing 100 reward mean in `episodes.csv` did, but that was never written down or checked. Before computing anything, write down one rule for "the step where a series starts rising", apply it to both series, and decide what result would mean the claim is false. Report the result either way.
 3. **Check the logger before trusting it.** Confirm that `metrics.csv` has 601 data rows spaced exactly 10,000 steps apart, that the six argmax counts sum to 500 on every row, and that `make_probe()` still regenerates the probe with the sha256 recorded in `run_config.json`. If any of these fail, items 1 and 2 are measuring a broken instrument. 
-4. **Pick the four clip checkpoints** The Oct 15 block records a clip at each milestone named in PLANS.md: random, first rally, breakthrough, trained. Random is step 0 and trained is 5,400,000, the best evaluated checkpoint. For the other two, write down what "first rally" and "breakthrough" mean in terms of `episodes.csv` before looking, then take the nearest saved checkpoint, since saves are every 50,000 steps. Record the four picks and the reasoning in run-02.md.
+4. **Pick the four clip checkpoints.** The Oct 15 block records a clip at each milestone named in PLANS.md: random, first rally, breakthrough, trained. Random is step 0 and trained is 5,400,000, the best evaluated checkpoint. For the other two, write down what "first rally" and "breakthrough" mean in terms of `episodes.csv` before looking, then take the nearest saved checkpoint, since saves are every 50,000 steps. Record the four picks and the reasoning in run-02.md.
 
 
 
