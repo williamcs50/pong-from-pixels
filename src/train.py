@@ -16,7 +16,7 @@ from src.action_selector import select_action
 from src.checkpoint import save_checkpoint
 from src.preprocess import Preprocessor
 from src.probe import load_or_make_probe
-from src.git_info import git_state
+from src.git_info import git_state, software_versions
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
 from src.transform import transform
@@ -227,6 +227,7 @@ def train(
         "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
         "sticky_actions_readback": actual_sticky,
         "n_actions": int(n_actions),
+        **software_versions(),
         "started_at": datetime.datetime.now().isoformat(timespec="seconds"),
     }
 
