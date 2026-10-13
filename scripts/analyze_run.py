@@ -20,6 +20,8 @@ TRAILING = 100  # the window the bar and the pre registration are both defined o
 PLATEAU = 1.0  # Run 2's pre registered plateau threshold, per 200,000 env steps
 EVAL_EPISODES = 100
 ASPIRATION = 18.0
+BAR = 0.0  # docs/PLANS.md: a mean above 0 beats the built in opponent
+RALLY_STANDARD_ERRORS = 2  # run-02.md's Clip selection rule for first rally
 REPORT_EVERY = 200_000  # the evaluation sweep's --every, so tables line up with it
 SHUTOUT = -21.0
 POINTS_TO_WIN = 21
@@ -54,6 +56,8 @@ CONFIG_KEYS = (
     "epsilon_decay_steps", "learning_rate", "gamma", "repeat_action_probability",
     "sticky_actions_readback", "seed", "checkpoint_every_steps", "metrics_every_steps",
     "probe_states", "probe_sha256", "device_name", "n_actions",
+    "python_version", "python_executable", "torch_version", "torch_cuda_version", "cudnn_version",
+    "gymnasium_version", "ale-py_version", "numpy_version", "opencv-python-headless_version",
 )
 
 
@@ -84,6 +88,7 @@ def load_run(run_dir):
         "episodes": read_csv(os.path.join(run_dir, "episodes.csv")),
         "metrics": read_csv(os.path.join(run_dir, "metrics.csv")),
         "eval": [],
+        "lengths": read_csv(os.path.join(run_dir, "eval_lengths.csv")),
     }
     # Run 1's seed 0 sweep predates the seed, std_reward and elapsed_s columns.
     for seed, name in (("0", "eval.csv"), ("1", "eval_seed1.csv")):
@@ -236,6 +241,7 @@ def report_evaluation(run):
 
     line("seeds", len(sweeps))
     line("checkpoints", len(sweeps[0]))
+    line("epsilon", ", ".join(sorted({r["epsilon"] for rows in sweeps for r in rows})))
     print(f"\n{INDENT}     step" + "".join(f"   seed {rows[0]['seed']}" for rows in sweeps)
           + "  training  seed 0 minus training")
     by_step = [{int(r["env_step"]): r for r in rows} for rows in sweeps]
@@ -260,6 +266,9 @@ def report_evaluation(run):
         line("best minus last", f"{gap:.2f}", 1)
         if standard_error(best) is not None:
             combined = math.hypot(standard_error(best), standard_error(last))
+            line("std, first", f"{float(rows[0]['std_reward']):.2f}", 1)
+            line("std, best", f"{float(best['std_reward']):.2f}", 1)
+            line("std, last", f"{float(last['std_reward']):.2f}", 1)
             line("standard error, best", f"{standard_error(best):.2f}", 1)
             line("standard error, last", f"{standard_error(last):.2f}", 1)
             line("shortfall in std errors", f"{(ASPIRATION - score(best)) / standard_error(best):.1f}", 1)
@@ -272,17 +281,21 @@ def report_evaluation(run):
         if "elapsed_s" in rows[0]:
             line("sweep time", f"{sum(float(r['elapsed_s']) for r in rows) / SECONDS_PER_MINUTE:.2f} min", 1)
 
-    if len(sweeps) > 1 and all(standard_error(rows[0]) is not None for rows in sweeps):
+    if len(sweeps) > 1:
         shared = sorted(set(by_step[0]) & set(by_step[1]))
         a, b = [by_step[0][s] for s in shared], [by_step[1][s] for s in shared]
         diffs = [abs(score(x) - score(y)) for x, y in zip(a, b)]
         worst = max(range(len(diffs)), key=diffs.__getitem__)
-        beyond = sum(1 for x, y, d in zip(a, b, diffs)
-                     if d > AGREEMENT_STANDARD_ERRORS * math.hypot(standard_error(x), standard_error(y)))
-        print("\nseed agreement")
+        print(f"\nseed agreement, {len(shared)} shared checkpoints")
         line("mean absolute difference", f"{sum(diffs) / len(diffs):.2f}", 1)
         line("largest difference", f"{diffs[worst]:.2f} at {int(a[worst]['env_step']):,}", 1)
-        line(f"beyond {AGREEMENT_STANDARD_ERRORS} std errors", beyond, 1)
+        if len(shared) < len(sweeps[0]):
+            for step, diff in zip(shared, diffs):
+                line(f"difference at {step:,}", f"{diff:.2f}", 1)
+        if all(standard_error(rows[0]) is not None for rows in sweeps):
+            beyond = sum(1 for x, y, d in zip(a, b, diffs)
+                         if d > AGREEMENT_STANDARD_ERRORS * math.hypot(standard_error(x), standard_error(y)))
+            line(f"beyond {AGREEMENT_STANDARD_ERRORS} std errors", beyond, 1)
 
     if not trail:
         return
@@ -396,6 +409,8 @@ def report_instrumentation(run):
         line(f"first row at {end}", f"{first_floor:,}" if first_floor else "never", 1)
         line(f"rows after {decay:,} at {end}", f"{sum(1 for e in after if e == end)} of {len(after)}", 1)
 
+    report_paddle(steps, counts)
+
     if config:
         report_replay(rows, steps, run["episodes"], config)
 
@@ -409,6 +424,23 @@ def report_instrumentation(run):
                      if r["batch_reward_fraction"] else "")
         print(f"{INDENT}{steps[i]:>9,}  {q_max[i]:>7.4f}  {q_spread[i]:>8.4f}  "
               f"{groups[0]:>3}  {groups[1]:>3}  {groups[2]:>4}{fractions}")
+
+
+def report_paddle(steps, counts):
+    groups = {g: [sum(c[a] for a in actions) for c in counts] for g, actions in PADDLE_GROUPS.items()}
+    # A network with no preference splits the probe states evenly across the groups.
+    indifferent = sum(counts[0]) / len(PADDLE_GROUPS)
+    late = [i for i, s in enumerate(steps) if s >= LATE_FROM]
+
+    print(f"\npaddle direction, against {indifferent:.0f} states per group with no preference")
+    for name, values in groups.items():
+        if late:
+            line(f"{name}, mean from {LATE_FROM:,}", f"{sum(values[i] for i in late) / len(late):.1f}", 1)
+    still = groups["still"]
+    below = next((steps[i] for i in range(len(still)) if max(still[i:]) < indifferent), None)
+    line("still below no preference for good from", f"{below:,}" if below is not None else "never", 1)
+    above = [steps[i] for i in range(1, len(still)) if still[i] >= indifferent]
+    line("rows since step 0 at or above it", ", ".join(f"{s:,}" for s in above) or "none", 1)
 
 
 def report_replay(rows, steps, episodes, config):
@@ -503,6 +535,59 @@ def report_throughput(run):
                  f"{size / BYTES_PER_GB:.2f} GB")
 
 
+def report_clip_selection(run):
+    sweeps, rescore = run["eval"], run["lengths"]
+    heading("Clip selection")
+    if not sweeps:
+        line("evaluation files", "none")
+        return
+    seed0 = {int(r["env_step"]): r for r in sweeps[0]}
+    steps = sorted(seed0)
+
+    line("random", f"{steps[0]:,}")
+
+    if rescore is None:
+        line("first rally", "no eval_lengths.csv, so the rule cannot be applied")
+    else:
+        rows = sorted(rescore, key=lambda r: int(r["env_step"]))
+        matching = sum(1 for r in rows if int(r["env_step"]) in seed0 and all(
+            r[k] == seed0[int(r["env_step"])][k] for k in ("mean_reward", "std_reward", "mean_episode_steps")))
+        print("\nrescore with episode length spread")
+        line("checkpoints", f"{rows[0]['env_step']} to {int(rows[-1]['env_step']):,}", 1)
+        line("matching eval.csv", f"{matching} of {len(rows)}", 1)
+        line("rescore time", f"{sum(float(r['elapsed_s']) for r in rows) / SECONDS_PER_MINUTE:.1f} min", 1)
+
+        mean = lambda r: float(r["mean_episode_steps"])
+        error = lambda r: float(r["std_episode_steps"]) / math.sqrt(EVAL_EPISODES)
+        base = rows[0]
+        print(f"\nfirst rally, mean episode length beating step {int(base['env_step']):,}'s "
+              f"by more than {RALLY_STANDARD_ERRORS} combined standard errors")
+        print(f"{INDENT}     step  mean steps  beats by     bar  fires")
+        print(f"{INDENT}{int(base['env_step']):>9,}  {mean(base):>10,.0f}  base")
+        rally = None
+        for r in rows[1:]:
+            beats = mean(r) - mean(base)
+            bar = RALLY_STANDARD_ERRORS * math.hypot(error(base), error(r))
+            fires = beats > bar
+            print(f"{INDENT}{int(r['env_step']):>9,}  {mean(r):>10,.0f}  {beats:>+8,.0f}  {bar:>6.1f}  "
+                  f"{'yes' if fires else 'no'}")
+            if fires:
+                rally = int(r["env_step"])
+                break
+        line("first rally", f"{rally:,}" if rally is not None
+             else f"not fired by {int(rows[-1]['env_step']):,}, rescore further")
+
+    over = next((s for s in steps if score(seed0[s]) > BAR), None)
+    best = max(steps, key=lambda s: score(seed0[s]))
+    print()
+    line("first over the bar", f"{over:,}, seed 0 {score(seed0[over]):+.2f}" if over is not None else "never")
+    seed1 = {int(r["env_step"]): r for r in sweeps[1]} if len(sweeps) > 1 else {}
+    quoted = f", seed 1 {score(seed1[best]):+.2f}" if best in seed1 else ""
+    line("trained", f"{best:,}, seed 0 {score(seed0[best]):+.2f}{quoted}")
+    if best == over:
+        line("note", "trained and first over the bar are one checkpoint, so one clip covers both")
+
+
 def report_compare(run, other):
     heading(f"Compared with {other['dir']}")
 
@@ -571,5 +656,6 @@ if __name__ == "__main__":
     report_evaluation(run)
     report_instrumentation(run)
     report_throughput(run)
+    report_clip_selection(run)
     if args.compare:
         report_compare(run, load_run(args.compare))
