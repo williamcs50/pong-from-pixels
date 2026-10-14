@@ -39,7 +39,6 @@ def test_preprocess_dtype() -> None:
 
 
 def test_preprocess_value_range() -> None:
-    # Verify raw uint8 grayscale values stay within the valid pixel range.
     p = Preprocessor()
     result = p.preprocess(make_real_pong_frame())
     assert result.min() >= 0, f"Min pixel value {result.min()} < 0"

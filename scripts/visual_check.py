@@ -328,7 +328,7 @@ def paddle_row(frame_rgb: np.ndarray) -> float | None:
     return None if length == 0 else start + (length - 1) / 2
 
 
-def settle(environment) -> np.ndarray:
+def settle(environment: gymnasium.Env) -> np.ndarray:
     # NOOP does not move the paddle, so this returns it to its reset position.
     obs, _ = environment.reset(seed=SEED)
     for _ in range(DRIVE_SETTLE):

@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -12,8 +13,8 @@ from src.git_info import git_state, software_versions
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def fake_git(status: str, commit: str = "a" * 40):
-    def run(command, **kwargs):
+def fake_git(status: str, commit: str = "a" * 40) -> Callable[..., subprocess.CompletedProcess]:
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
         output = status if "status" in command else commit
         return subprocess.CompletedProcess(command, 0, stdout=output + "\n", stderr="")
     return run

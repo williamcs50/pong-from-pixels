@@ -45,7 +45,6 @@ def test_backward_pass() -> None:
     loss = F.mse_loss(out, target)
     loss.backward()
 
-    # Check that gradients are not None.
     for name, param in net.named_parameters():
         assert param.grad is not None, f"Gradient for {name} is None"
 
@@ -67,7 +66,6 @@ def test_target_network_sync() -> None:
     assert optimizer_param_ids == online_param_ids, "Optimizer should hold exactly online_net's parameters"
     assert optimizer_param_ids.isdisjoint(target_param_ids), "Optimizer should not hold any target_net parameters"
 
-    # Snapshot target weights before the update.
     target_snapshot = {name: param.detach().clone() for name, param in target_net.named_parameters()}
 
     x = torch.randn(2, 4, 84, 84, device=DEVICE)

@@ -36,7 +36,7 @@ REAL_CONFIG = {
 }
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch a real run, or a shorter warmup pass of the same code path.")
     parser.add_argument(
         "--total-steps",

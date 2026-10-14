@@ -26,7 +26,7 @@ COLUMNS = ["env_step", "episodes", "epsilon", "seed", "mean_reward", "std_reward
            "mean_episode_steps", "std_episode_steps", "elapsed_s"]
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate every Nth checkpoint of a run.")
     parser.add_argument("run_dir", help="a run directory holding checkpoints/")
     parser.add_argument(
@@ -46,7 +46,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def checkpoints_to_evaluate(checkpoint_dir, every):
+def checkpoints_to_evaluate(checkpoint_dir: str, every: int) -> list[tuple[int, str]]:
     pattern = re.compile(r"^step_(\d+)\.pt$")
     found = []
 
@@ -58,7 +58,7 @@ def checkpoints_to_evaluate(checkpoint_dir, every):
     return found
 
 
-def record_invocation(path, settings):
+def record_invocation(path: str, settings: dict) -> None:
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
 
     # A list rather than one object, because the sweep resumes: a restart after a
@@ -73,7 +73,7 @@ def record_invocation(path, settings):
         json.dump(history, handle, indent=2)
 
 
-def already_done(out_path):
+def already_done(out_path: str) -> set[int]:
     if not os.path.exists(out_path):
         return set()
 

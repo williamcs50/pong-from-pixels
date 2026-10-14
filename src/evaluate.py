@@ -26,7 +26,7 @@ def evaluate(
     epsilon: float,
     seed: int,
     repeat_action_probability: float,
-    device,
+    device: torch.device,
 ) -> dict:
     env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability)
     env.action_space.seed(seed)

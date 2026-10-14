@@ -28,7 +28,7 @@ except ImportError:
     QNetwork = None
 
 
-def check_gymnasium():
+def check_gymnasium() -> None:
     try:
         env = gym.make("ALE/Pong-v5", repeat_action_probability=0.0)
         env.reset()
@@ -40,7 +40,7 @@ def check_gymnasium():
         sys.exit(1)
 
 
-def check_torch():
+def check_torch() -> None:
     if torch is None:
         print("FAIL  torch not installed (needed for training)")
         return
@@ -56,7 +56,7 @@ def check_torch():
     print(f"OK  GPU compute verified (result device: {y.device})")
 
 
-def check_vram_baseline():
+def check_vram_baseline() -> None:
     # The number that constrains batch size is free VRAM, not total: the desktop
     # and browser already hold part of the 6GB.
     if torch is None:
@@ -125,7 +125,7 @@ class MEMORYSTATUSEX(ctypes.Structure):
     ]
 
 
-def check_host_ram():
+def check_host_ram() -> None:
     # The replay buffer is sized against host RAM, so this is the number that
     # decides the capacity. Win32 through ctypes because psutil is not a
     # dependency and is not worth adding for two numbers.
@@ -140,7 +140,7 @@ def check_host_ram():
     print(f"OK  host RAM: {status.ullTotalPhys / gib:.2f} GiB total, {status.ullAvailPhys / gib:.2f} GiB available right now")
 
 
-def check_buffer_ram(capacity=100_000):
+def check_buffer_ram(capacity: int = 100_000) -> None:
     # The replay buffer is the big allocation and it is host RAM, not VRAM.
     # Measured by summing nbytes off a small buffer rather than hardcoding
     # 28,224, so this stays correct if a dtype or the 84x84x4 shape changes.

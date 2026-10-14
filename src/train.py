@@ -24,7 +24,8 @@ from src.transform import transform
 gymnasium.register_envs(ale_py)
 
 
-def train_step(q_network, target_network, optimizer, batch, gamma) -> float:
+def train_step(q_network: QNetwork, target_network: QNetwork, optimizer: optim.Optimizer,
+               batch: tuple, gamma: float) -> float:
     states, actions, rewards, next_states, dones = batch
     device = next(q_network.parameters()).device
 
@@ -55,7 +56,7 @@ def train_step(q_network, target_network, optimizer, batch, gamma) -> float:
     return loss.item()
 
 
-def probe_metrics(q_network, probe_tensor) -> dict:
+def probe_metrics(q_network: QNetwork, probe_tensor: torch.Tensor) -> dict:
     # Levels, not deltas. Drift against step 0, the previous row, or another run is
     # all derivable afterwards, and computing one of them here picks the baseline
     # for every later reader.
@@ -78,24 +79,24 @@ def probe_metrics(q_network, probe_tensor) -> dict:
 
 def train(
     *,
-    total_steps,
-    buffer_capacity,
-    warmup_steps,
-    train_every,
-    batch_size,
-    target_sync_every_updates,
-    epsilon_start,
-    epsilon_end,
-    epsilon_decay_steps,
-    learning_rate,
-    gamma,
-    repeat_action_probability,
-    seed,
-    output_dir,
-    checkpoint_every_steps,
-    metrics_every_steps,
-    probe_path,
-    allow_dirty,
+    total_steps: int,
+    buffer_capacity: int,
+    warmup_steps: int,
+    train_every: int,
+    batch_size: int,
+    target_sync_every_updates: int,
+    epsilon_start: float,
+    epsilon_end: float,
+    epsilon_decay_steps: int,
+    learning_rate: float,
+    gamma: float,
+    repeat_action_probability: float,
+    seed: int,
+    output_dir: str,
+    checkpoint_every_steps: int,
+    metrics_every_steps: int,
+    probe_path: str | None,
+    allow_dirty: bool,
 ) -> None:
     if warmup_steps < batch_size:
         raise ValueError("warmup_steps must be >= batch_size")
@@ -192,12 +193,12 @@ def train(
     )
     print(f"Network output size: {output_check.shape[-1]}")
 
-    # The output directory is chosen at launch, not committed, so the commit hash
     probe, probe_sha = load_or_make_probe(probe_path, os.path.join(output_dir, "probe.npy"))
     probe_tensor = transform(probe, device)
     print(f"Probe: {len(probe)} states, sha256 {probe_sha[:12]}"
           f"{' loaded from ' + probe_path if probe_path else ', generated and saved'}")
 
+    # The output directory is chosen at launch, not committed, so the commit hash
     # alone does not say what ran where. This makes each run self describing.
     run_config = {
         "total_steps": total_steps,
@@ -292,7 +293,7 @@ def train(
     window_done_count = 0
     window_batches = 0
 
-    def write_metrics_row(at_step, epsilon_now):
+    def write_metrics_row(at_step: int, epsilon_now: float) -> None:
         nonlocal window_reward_count, window_done_count, window_batches
         stats = probe_metrics(q_network, probe_tensor)
         sampled = window_batches * batch_size
@@ -316,12 +317,10 @@ def train(
     write_metrics_row(0, epsilon_start)
 
     for step in range(total_steps):
-        # Linear epsilon decay
         decay_fraction = min(step / epsilon_decay_steps, 1.0)
 
         epsilon = epsilon_start + decay_fraction * (epsilon_end - epsilon_start)
 
-        # Epsilon greedy action
         state_tensor = transform(stacked, device)
 
         with torch.no_grad():
@@ -329,12 +328,10 @@ def train(
 
         action = select_action(q_values, epsilon, n_actions)
 
-        # Step environment
         next_obs, reward, terminated, truncated, _ = env.step(action)
         episode_reward += reward
         episode_steps += 1
 
-        # Preprocess / stack the next frame
         next_stacked = prep.step(next_obs)
 
         # Only a real game end stops bootstrapping. A time limit cut means the
@@ -348,7 +345,6 @@ def train(
         )
         stacked = next_stacked
 
-        # Either way the episode is over, so reset
         if terminated or truncated:
             episodes_finished += 1
             end_reason = "terminated" if terminated else "truncated"
@@ -378,7 +374,6 @@ def train(
             obs, _ = env.reset()
             stacked = prep.reset(obs)
 
-        # Don't train until warmup is reached
         env_step = step + 1
 
         if (env_step >= warmup_steps and env_step % train_every == 0):

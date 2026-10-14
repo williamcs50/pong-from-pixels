@@ -23,10 +23,8 @@ class ReplayBuffer:
         self.next_state[self.position] = next_state
         self.done[self.position] = done
 
-        # Advance write pointer
         self.position = (self.position + 1) % self.capacity
 
-        # Grow until capacity
         self.size = min(self.size + 1, self.capacity)
 
     def sample(self, batch_size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:

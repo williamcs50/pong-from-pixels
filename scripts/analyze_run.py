@@ -61,26 +61,26 @@ CONFIG_KEYS = (
 )
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Report a run's figures from its own logs.")
     parser.add_argument("run_dir", help="directory holding episodes.csv, gpu_log.csv and run_config.json")
     parser.add_argument("--compare", help="another run directory to compare this one against")
     return parser.parse_args()
 
 
-def heading(name):
+def heading(name: str) -> None:
     print(f"\n== {name} ==")
 
 
-def line(label, value, depth=0):
+def line(label: str, value: object, depth: int = 0) -> None:
     print(f"{INDENT * depth}{label:<{LABEL_WIDTH - len(INDENT) * depth - 1}} {value}")
 
 
-def read_csv(path):
+def read_csv(path: str) -> list[dict[str, str]] | None:
     return list(csv.DictReader(open(path, newline=""))) if os.path.exists(path) else None
 
 
-def load_run(run_dir):
+def load_run(run_dir: str) -> dict:
     config_path = os.path.join(run_dir, "run_config.json")
     run = {
         "dir": run_dir,
@@ -104,7 +104,7 @@ def load_run(run_dir):
     return run
 
 
-def trailing_means(rewards, steps):
+def trailing_means(rewards: list[float], steps: list[int]) -> list[tuple[int, float]]:
     # (env_step, mean over the previous TRAILING episodes) once enough exist.
     return [
         (steps[i], sum(rewards[i - TRAILING + 1:i + 1]) / TRAILING)
@@ -112,17 +112,17 @@ def trailing_means(rewards, steps):
     ]
 
 
-def nearest(trail, step):
+def nearest(trail: list[tuple[int, float]], step: int) -> tuple[int, float]:
     return min(trail, key=lambda row: abs(row[0] - step))
 
 
-def trailing_at(trail, step):
+def trailing_at(trail: list[tuple[int, float]], step: int) -> float | None:
     # From the last episode that ended at or before step.
     i = bisect.bisect_right([s for s, _ in trail], step) - 1
     return trail[i][1] if i >= 0 else None
 
 
-def rates(rows):
+def rates(rows: list[dict[str, str]]) -> dict:
     wall = float(rows[-1]["wall_clock_s"])
     # The fill phase has no updates in it and runs several times faster, so the two
     # rates are reported separately. A rate averaged across both describes neither.
@@ -140,7 +140,7 @@ def rates(rows):
     return result
 
 
-def read_gpu(path):
+def read_gpu(path: str) -> dict | None:
     if not os.path.exists(path):
         return None
     rows = [r for r in csv.reader(open(path)) if r][1:]
@@ -157,15 +157,15 @@ def read_gpu(path):
     }
 
 
-def standard_error(row):
+def standard_error(row: dict[str, str]) -> float | None:
     return float(row["std_reward"]) / math.sqrt(EVAL_EPISODES) if "std_reward" in row else None
 
 
-def score(row):
+def score(row: dict[str, str]) -> float:
     return float(row["mean_reward"])
 
 
-def report_config(config):
+def report_config(config: dict) -> None:
     heading("Config")
     for key in CONFIG_KEYS:
         if key in config:
@@ -182,7 +182,7 @@ def report_config(config):
         line("committed before start", f"{hours} h {rest // SECONDS_PER_MINUTE} min")
 
 
-def report_results(run):
+def report_results(run: dict) -> None:
     rows, trail, config = run["episodes"], run["trail"], run["config"]
     rewards = [float(row["reward"]) for row in rows]
     steps = [int(row["env_step"]) for row in rows]
@@ -232,7 +232,7 @@ def report_results(run):
         line("mean loss, range", f"{min(losses):.6f} to {max(losses):.6f}")
 
 
-def report_evaluation(run):
+def report_evaluation(run: dict) -> None:
     sweeps, trail = run["eval"], run["trail"]
     heading("Evaluation")
     if not sweeps:
@@ -314,7 +314,7 @@ def report_evaluation(run):
             print(f"{INDENT}{lo:>9,}  {hi:>9,}  {ends:+9.2f}  {spread:5.2f}  {moves}")
 
 
-def onset(series, fraction):
+def onset(series: list[tuple[int, float]], fraction: float) -> int | None:
     values = [v for _, v in series]
     low = values.index(min(values))
     threshold = values[low] + fraction * (max(values) - values[low])
@@ -324,7 +324,7 @@ def onset(series, fraction):
     return None
 
 
-def report_instrumentation(run):
+def report_instrumentation(run: dict) -> None:
     rows, config = run["metrics"], run["config"]
     heading("Instrumentation")
     if rows is None:
@@ -426,7 +426,7 @@ def report_instrumentation(run):
               f"{groups[0]:>3}  {groups[1]:>3}  {groups[2]:>4}{fractions}")
 
 
-def report_paddle(steps, counts):
+def report_paddle(steps: list[int], counts: list[list[int]]) -> None:
     groups = {g: [sum(c[a] for a in actions) for c in counts] for g, actions in PADDLE_GROUPS.items()}
     # A network with no preference splits the probe states evenly across the groups.
     indifferent = sum(counts[0]) / len(PADDLE_GROUPS)
@@ -443,7 +443,8 @@ def report_paddle(steps, counts):
     line("rows since step 0 at or above it", ", ".join(f"{s:,}" for s in above) or "none", 1)
 
 
-def report_replay(rows, steps, episodes, config):
+def report_replay(rows: list[dict[str, str]], steps: list[int], episodes: list[dict[str, str]],
+                  config: dict) -> None:
     # The row at warmup_steps holds a single batch, so only full windows are summarised.
     full = config["metrics_every_steps"] // config["train_every"]
     sampled = [i for i, r in enumerate(rows) if r["batches_in_window"] and int(r["batches_in_window"]) == full]
@@ -488,7 +489,7 @@ def report_replay(rows, steps, episodes, config):
              f"{sum(1 for v in values if abs(v) <= AGREEMENT_STANDARD_ERRORS)} of {len(values)}", 1)
 
 
-def report_throughput(run):
+def report_throughput(run: dict) -> None:
     r, gpu, config = run["rates"], run["gpu"], run["config"]
     heading("Throughput and hardware")
     line("wall clock", f"{r['wall'] / SECONDS_PER_HOUR:.2f} h")
@@ -535,7 +536,7 @@ def report_throughput(run):
                  f"{size / BYTES_PER_GB:.2f} GB")
 
 
-def report_clip_selection(run):
+def report_clip_selection(run: dict) -> None:
     sweeps, rescore = run["eval"], run["lengths"]
     heading("Clip selection")
     if not sweeps:
@@ -588,7 +589,7 @@ def report_clip_selection(run):
         line("note", "trained and first over the bar are one checkpoint, so one clip covers both")
 
 
-def report_compare(run, other):
+def report_compare(run: dict, other: dict) -> None:
     heading(f"Compared with {other['dir']}")
 
     strip = lambda row: {k: v for k, v in row.items() if k != "wall_clock_s"}

@@ -13,7 +13,6 @@ q_values = torch.tensor([[0.1, -0.2, 0.3, 2.0, 0.5, -0.1]])
 
 
 def test_greedy_always_selects_argmax() -> None:
-    # Epsilon = 0 should always choose the argmax.
     actions = [
         select_action(q_values=q_values, epsilon=0.0, n_actions=N_ACTIONS)
         for _ in range(100)
@@ -45,7 +44,6 @@ def test_explore_selects_all_actions_uniformly() -> None:
 
 
 def test_greedy_handles_requires_grad_tensor() -> None:
-    # Selector should work with tensors that require gradients.
     q_values_with_grad = q_values.clone().requires_grad_(True)
     action = select_action(q_values=q_values_with_grad, epsilon=0.0, n_actions=N_ACTIONS)
 

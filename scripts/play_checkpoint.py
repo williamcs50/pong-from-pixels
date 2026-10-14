@@ -13,7 +13,7 @@ import torch
 from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, evaluate
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Play episodes from a saved checkpoint.")
     parser.add_argument("checkpoint", help="path to a step_NNNNNNNN.pt file")
     parser.add_argument("--episodes", type=int, default=10)

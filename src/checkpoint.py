@@ -10,9 +10,9 @@ import torch
 def save_checkpoint(
     path: str,
     *,
-    q_network,
-    target_network,
-    optimizer,
+    q_network: torch.nn.Module,
+    target_network: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
     env_step: int,
     episode: int,
     gradient_updates: int,
@@ -39,11 +39,11 @@ def save_checkpoint(
 def load_checkpoint(
     path: str,
     *,
-    q_network,
-    target_network=None,
-    optimizer=None,
+    q_network: torch.nn.Module,
+    target_network: torch.nn.Module | None = None,
+    optimizer: torch.optim.Optimizer | None = None,
     restore_rng: bool = False,
-    map_location=None,
+    map_location: torch.device | str | None = None,
 ) -> dict:
     # weights_only=False because the payload holds RNG state, not just tensors.
     payload = torch.load(path, map_location=map_location, weights_only=False)

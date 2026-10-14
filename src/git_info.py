@@ -19,7 +19,7 @@ def git_state() -> dict:
     # than clean.
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    def run(*command):
+    def run(*command: str) -> str:
         return subprocess.run(
             command, cwd=repo_root, capture_output=True, text=True, check=True
         ).stdout.strip()
