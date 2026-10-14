@@ -27,6 +27,7 @@ def evaluate(
     seed: int,
     repeat_action_probability: float,
     device: torch.device,
+    record_video: bool = False,
 ) -> dict:
     env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability)
     env.action_space.seed(seed)
@@ -34,16 +35,19 @@ def evaluate(
 
     np.random.seed(seed)  # the exploration draw in select_action
 
-    # Seeded after the network on purpose: with the training seed, init reproduces
-    # step 0's saved weights exactly and the check below could never fire.
+    # Zeroed rather than left at a random init, which can equal step 0's saved weights
+    # when torch is already seeded, for example by an earlier call to this function.
     q_network = QNetwork(n_actions).to(device)
+    with torch.no_grad():
+        for param in q_network.parameters():
+            param.zero_()
     before = {k: v.clone() for k, v in q_network.state_dict().items()}
     counters = load_checkpoint(checkpoint_path, q_network=q_network, map_location=device)
     q_network.eval()
     torch.manual_seed(seed)
 
-    # A fresh network plays episodes without crashing too, so a no-op load would pass
-    # every check below. Comparing against another fresh init would not catch it.
+    # A network that was never loaded plays episodes without crashing too, so a no-op
+    # load would otherwise pass every check below.
     after = q_network.state_dict()
     assert any(not torch.equal(before[k], after[k]) for k in before), (
         f"load_checkpoint changed no weights for {checkpoint_path}"
@@ -56,11 +60,14 @@ def evaluate(
     prep = Preprocessor()
     rewards = []
     lengths = []
+    frames: list[np.ndarray] = []
     actions_taken = collections.Counter()
 
     for episode in range(1, episodes + 1):
         # Only the first reset takes the seed, so later episodes continue the stream.
         obs, _ = env.reset(seed=seed if episode == 1 else None)
+        if record_video and episode == 1:
+            frames.append(obs)
         stacked = prep.reset(obs)
         total = 0.0
         steps = 0
@@ -74,6 +81,8 @@ def evaluate(
             actions_taken[action] += 1
 
             obs, reward, terminated, truncated, _ = env.step(action)
+            if record_video and episode == 1:
+                frames.append(obs)
             stacked = prep.step(obs)
             total += reward
             steps += 1
@@ -102,4 +111,5 @@ def evaluate(
         "lengths": lengths,
         "actions": dict(sorted(actions_taken.items())),
         "tensors_verified": len(stored),
+        "frames": frames if record_video else None,
     }
