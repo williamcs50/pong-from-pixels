@@ -698,3 +698,27 @@ The floor has been met. Item 2 is reported as an observation, since the rule was
 - Training barely uses the GPU's memory. A training step needs about 58 MiB at its peak, the 40.3 resident plus the 18.1 above it, while `gpu_log.csv` shows 1,047 to 2,287 MiB, and almost all of that is the CUDA context and other programs.
 
 ---
+
+# Wednesday: Clip Recording
+
+**Date:** 2026-10-14
+
+**Floor:**
+
+1. **Add recording to `evaluate()`.** An optional argument that keeps the first episode's raw frames, so a clip is played through the same code that scored the sweep.
+2. **Write `scripts/record_clip.py`.** It plays the seed 0 first episode twice, refuses to save unless both plays give identical reward and length, then writes an mp4 at 15 fps, scaled up 3 times.
+3. **Record all four clips:** 0, 600,000, 2,800,000, and 5,400,000. Note each one's reward, length, and recording time.
+
+**Aspiration:**
+
+1. **Update the README.** Add Run 2's result, the evaluation sweep (`sweep_eval.py`, built on `evaluate.py`), `analyze_run.py --compare`, how to run the tests, and the full list of files a run writes. Done means someone new could go from setup to reproducing Run 2's figures using only the README.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
+
+---
