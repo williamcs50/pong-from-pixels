@@ -443,6 +443,14 @@ All four are different checkpoints, so the slider keeps four positions. 200,000 
 than step 0's, at 764 and 769 steps. The episode check, playing each clip twice, comes
 when I record the clips.
 
+**Clip window.** Written after a first recording of all four episodes, and committed
+before any clip is cut. Each clip on the page is the first 30 seconds of its
+episode, 450 frames at 15 fps, starting from the reset frame. The window is the same
+for all four, and every episode is longer than it, so no clip is chosen by where it
+ends. The page loops each clip, muted, so it ends wherever frame 450 falls. Each clip
+also saves the six Q values the network computed for every frame it shows, so the
+page's Q value bars and win estimate come from the same episode as the footage.
+
 ---
 
 ## Limitations
