@@ -27,12 +27,14 @@ def make_trained() -> tuple[QNetwork, QNetwork, optim.Optimizer]:
 
 
 def fresh() -> tuple[QNetwork, QNetwork, optim.Optimizer]:
+    """Return networks and an optimizer at a different init, to load a checkpoint into."""
     torch.manual_seed(1)
     q_network, target_network = QNetwork(N_ACTIONS), QNetwork(N_ACTIONS)
     return q_network, target_network, optim.Adam(q_network.parameters(), lr=1e-3)
 
 
 def assert_same_state(a: dict, b: dict, what: str) -> None:
+    """Assert two state dicts hold the same keys and identical tensors."""
     assert a.keys() == b.keys(), f"{what} keys differ: {a.keys() ^ b.keys()}"
     for key in a:
         assert torch.equal(a[key], b[key]), f"{what} '{key}' did not survive the round trip"

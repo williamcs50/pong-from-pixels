@@ -16,7 +16,7 @@ SETTINGS = {"episodes": 1, "epsilon": 0.05, "seed": 0, "repeat_action_probabilit
 
 
 def write_step_0_checkpoint(path: str) -> None:
-    # Built the way train() builds step 0, so the weights equal a seed 0 init.
+    """Save a checkpoint built the way train() builds step 0, from a seed 0 init."""
     torch.manual_seed(0)
     q_network, target_network = QNetwork(6), QNetwork(6)
     save_checkpoint(path, q_network=q_network, target_network=target_network,
@@ -43,8 +43,10 @@ def test_recording_keeps_every_frame_and_changes_nothing() -> None:
         plain = evaluate(path, **SETTINGS)
         recorded = evaluate(path, **SETTINGS, record_video=True)
 
-    frames = recorded["frames"]
-    assert plain["frames"] is None, "frames returned without record_video"
+    frames, q_values = recorded["frames"], recorded["q_values"]
+    assert plain["frames"] is None and plain["q_values"] is None, "recording returned without record_video"
+    assert len(q_values) == len(frames) - 1, f"{len(q_values)} Q value rows for {len(frames)} frames"
+    assert all(len(row) == 6 for row in q_values), "a Q value row without one value per action"
     assert len(frames) == recorded["lengths"][0] + 1, (
         f"{len(frames)} frames for a {recorded['lengths'][0]} step episode, expected one per step plus the reset"
     )

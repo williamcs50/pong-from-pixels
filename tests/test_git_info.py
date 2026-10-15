@@ -14,6 +14,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def fake_git(status: str, commit: str = "a" * 40) -> Callable[..., subprocess.CompletedProcess]:
+    """Return a subprocess.run stand in: git status prints status, anything else prints commit."""
     def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
         output = status if "status" in command else commit
         return subprocess.CompletedProcess(command, 0, stdout=output + "\n", stderr="")

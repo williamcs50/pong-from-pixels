@@ -21,7 +21,8 @@ sweep_eval = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sweep_eval)
 
 
-def write_checkpoint(directory: str, name_step: int, held_step: int = None) -> None:
+def write_checkpoint(directory: str, name_step: int, held_step: int | None = None) -> None:
+    """Save a fresh checkpoint named for name_step, holding held_step as its counter if given."""
     q_network, target_network = QNetwork(6), QNetwork(6)
     save_checkpoint(os.path.join(directory, f"step_{name_step:08d}.pt"), q_network=q_network,
                     target_network=target_network, optimizer=optim.Adam(q_network.parameters()),
@@ -29,6 +30,7 @@ def write_checkpoint(directory: str, name_step: int, held_step: int = None) -> N
 
 
 def run_sweep(run_dir: str, *extra: str) -> subprocess.CompletedProcess:
+    """Run sweep_eval.py at one episode per checkpoint and return the finished process."""
     # CPU, so the test neither needs a GPU nor competes with a sweep already on one.
     # "-1" rather than "": an empty value leaves torch reporting CUDA with no device.
     env = {**os.environ, "CUDA_VISIBLE_DEVICES": "-1"}
@@ -37,6 +39,7 @@ def run_sweep(run_dir: str, *extra: str) -> subprocess.CompletedProcess:
 
 
 def read_rows(path: str) -> list[dict]:
+    """Return the rows of a sweep's CSV file."""
     with open(path, newline="") as handle:
         return list(csv.DictReader(handle))
 

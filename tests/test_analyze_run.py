@@ -23,10 +23,12 @@ EXTERNAL = (
     "roughly 95 million", "8,000,000 frames", "Nature's 50,000,000", "Nature's 1,000,000",
     "1.2M", "across 200 episodes", "gained 2.56 points", "about 5 combined", "about 50 minutes",
     "51.3 W", "or 51 W",
+    "first 30 seconds", "450 frames at 15 fps", "frame 450", "six Q values",
 )
 
 
 def run(*args: str) -> str:
+    """Run analyze_run.py with these arguments and return what it printed."""
     result = subprocess.run([sys.executable, SCRIPT, *args], cwd=REPO_ROOT,
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
@@ -34,10 +36,12 @@ def run(*args: str) -> str:
 
 
 def numbers(text: str) -> set[str]:
+    """Return every number in text, without commas or a leading plus sign."""
     return {n.replace(",", "").lstrip("+").rstrip(".") for n in re.findall(r"[-+]?\d[\d,]*\.?\d*", text)}
 
 
 def unprinted(doc: str, output: str) -> list[str]:
+    """Return the numbers a write up quotes that the analyzer output never prints."""
     # Commands, code, links, dates and clock times are not figures.
     body = re.sub(r"```.*?```", "", doc, flags=re.S)
     body = re.sub(r"`[^`]*`|\[[^\]]*\]\([^)]*\)|20\d\d-\d\d-\d\d|\d\d:\d\d(:\d\d)?", "", body)
@@ -50,6 +54,7 @@ def unprinted(doc: str, output: str) -> list[str]:
 
 
 def outputs_for(name: str) -> str:
+    """Return the analyzer output for a write up and every run directory it draws on."""
     runs = {
         "run-02": [("run-02",), ("run-02", "--compare", "run-01"), ("run-02", "--compare", "run-02-warmup"),
                    ("run-01",), ("run-00-warmup",)],
