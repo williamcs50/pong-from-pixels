@@ -61,6 +61,9 @@ def evaluate(
     rewards = []
     lengths = []
     frames: list[np.ndarray] = []
+    # q_record[i] holds the Q values computed while frames[i] was on screen. The last
+    # frame, after the final action, gets none.
+    q_record: list[list[float]] = []
     actions_taken = collections.Counter()
 
     for episode in range(1, episodes + 1):
@@ -75,6 +78,8 @@ def evaluate(
         while True:
             with torch.no_grad():
                 q_values = q_network(transform(stacked, device))
+            if record_video and episode == 1:
+                q_record.append(q_values[0].tolist())
 
             action = select_action(q_values, epsilon, n_actions)
             assert isinstance(action, int) and 0 <= action < n_actions, f"illegal action {action!r}"
@@ -112,4 +117,5 @@ def evaluate(
         "actions": dict(sorted(actions_taken.items())),
         "tensors_verified": len(stored),
         "frames": frames if record_video else None,
+        "q_values": q_record if record_video else None,
     }
