@@ -37,7 +37,7 @@ CLIP_FRAMES = CLIP_SECONDS * FPS
 ACTION_NAMES = ("NOOP", "FIRE", "RIGHT", "LEFT", "RIGHTFIRE", "LEFTFIRE")
 PADDLE_GROUPS = {"up": (2, 4), "down": (3, 5), "still": (0, 1)}
 
-# From scripts/visual_check.py: the ball is this grey in every channel, the field lies
+# From scripts/visual_check.py: the ball is this gray in every channel, the field lies
 # between these raw rows, and the agent's paddle starts at this raw column.
 BALL_SHADE = 236
 RAW_FIELD_TOP, RAW_FIELD_BOTTOM = 34, 193
