@@ -8,12 +8,13 @@
   "episode_steps": 824,
   "episode_frames": 825,
   "clip_frames": 450,
+  "clip_first_episode_frame": 375,
   "fps": 15,
   "scale": 3,
   "clip_s": 30,
   "plays_agreed": true,
-  "elapsed_s": 3.1,
-  "git_commit": "d8223b3b11c9151e531bcba21ed83b9a1cc08e52",
+  "elapsed_s": 3.0,
+  "git_commit": "f1ba9d840e694a53f604ad4fcf98d386586ddbbb",
   "git_dirty": false,
   "git_status": "",
   "python_version": "3.11.0",
@@ -26,5 +27,5 @@
   "numpy_version": "2.4.6",
   "opencv-python-headless_version": "5.0.0.93",
   "imageio-ffmpeg_version": "0.6.0",
-  "recorded_at": "2026-10-15T10:41:05"
+  "recorded_at": "2026-10-15T10:57:12"
 }
