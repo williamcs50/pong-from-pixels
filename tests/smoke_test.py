@@ -54,7 +54,7 @@ def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
         action = select_action(q_values, EPSILON, n_actions)
         assert 0 <= action < n_actions, f"Action {action} is not a valid index into {n_actions} actions"
 
-        obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, _ = env.step(action)
         if terminated or truncated:
             obs, _ = env.reset()
             next_stacked = prep.reset(obs)

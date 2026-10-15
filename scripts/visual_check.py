@@ -80,7 +80,7 @@ env.action_space.seed(SEED)
 
 # Step forward so the ball is in play
 for _ in range(60):
-    obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+    obs, _, terminated, truncated, _ = env.step(env.action_space.sample())
     if terminated or truncated:
         obs, _ = env.reset()
 
@@ -108,7 +108,7 @@ motion_stack = None
 motion_stack_step = None
 for step in range(BUILD_STEPS):
     action = env.action_space.sample()
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, _ = env.step(action)
     episode_over = terminated or truncated
     if episode_over:
         # env.reset() and prep.reset() always together, or slots span two episodes.

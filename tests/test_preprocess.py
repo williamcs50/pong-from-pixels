@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.preprocess import Preprocessor
 
+gym.register_envs(ale_py)
+
 
 def make_fake_frame() -> np.ndarray:
     """Return random noise for unit tests that compare frames in the stack."""
