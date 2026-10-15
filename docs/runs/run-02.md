@@ -459,6 +459,17 @@ screen. The window is still the same for all four, so the change applies to ever
 and not just the one that ends in a win. No action follows the final frame, so it has
 no Q values of its own, and it repeats the frame before it.
 
+**First rally clip, revised.** The seed 0 episode at 600,000 never returns the ball, so
+its last 30 seconds didn't show the milestone the clip is named for. Counting returns
+across seeds 0 to 8 showed they're real at 600,000 but patchy: six of the nine episodes
+return the ball at least once, and only a few return it several times close together.
+This rule was written after seeing those counts, and committed before recording. The
+first rally clip comes from the first episode, trying evaluation seeds 0, 1, 2 and so
+on in order, with at least 3 returns within 30 seconds, and starts 2 seconds before the
+first of those returns. A return is the ball moving toward the agent's paddle and
+turning back beside it. The other three clips keep the seed 0 episode and its last 30
+seconds.
+
 ---
 
 ## Limitations

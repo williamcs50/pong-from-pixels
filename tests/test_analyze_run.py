@@ -24,6 +24,8 @@ EXTERNAL = (
     "1.2M", "across 200 episodes", "gained 2.56 points", "about 5 combined", "about 50 minutes",
     "51.3 W", "or 51 W",
     "first 30 seconds", "450 frames at 15 fps", "frame 450", "six Q values", "304 steps longer", "last 30 seconds", "last 30 end", "last 450 frames",
+    "seeds 0 to 8", "six of the nine", "seeds 0, 1, 2", "at least 3 returns within 30 seconds",
+    "starts 2 seconds before",
 )
 
 
