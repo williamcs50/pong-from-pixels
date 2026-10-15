@@ -470,6 +470,29 @@ first of those returns. A return is the ball moving toward the agent's paddle an
 turning back beside it. The other three clips keep the seed 0 episode and its last 30
 seconds.
 
+**Clips.** All four passed the episode check on the GPU, so the CPU fallback was never
+needed:
+
+| Milestone | Checkpoint | Seed | Reward | Steps | Clip starts at frame |
+|---|---|---|---|---|---|
+| Random | 0 | 0 | -21 | 824 | 375 |
+| First rally | 600,000 | 6 | -18 | 1,517 | 187 |
+| First over the bar | 2,800,000 | 0 | +6 | 4,796 | 4,347 |
+| Trained | 5,400,000 | 0 | +18 | 2,386 | 1,937 |
+
+Searching seeds in order, the first rally rule passed over seeds 0 to 5 and stopped at
+seed 6. Its episode has 7 returns, 4 of them inside the clip, and it is the first clip
+where the agent scores at all, taking 3 points before losing. The other three clips end
+on the final point of their seed 0 episode.
+
+Each clip is in [run-02/clips/](run-02/clips/) as an H.264 video, a `_q.json` with the
+six Q values for each of its 450 frames, and a `.json` record of the episode, the
+commit, and the software versions. Random, first over the bar, and trained were
+recorded at `f1ba9d8`, and first rally at `4f56a27`, all with a clean working tree. The
+first rally clip was recorded twice, and the first time the clip files from the earlier
+window were still uncommitted, so its record showed a dirty tree. The second recording
+played the identical episode with nothing uncommitted.
+
 ---
 
 ## Limitations
