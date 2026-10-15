@@ -1,3 +1,6 @@
+# scripts/check_environment.py
+# Check that Pong, PyTorch, and the GPU work, and measure the memory a real run needs.
+
 import ctypes
 import os
 import sys

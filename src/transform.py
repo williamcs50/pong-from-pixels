@@ -1,3 +1,7 @@
+# src/transform.py
+# The one conversion from stored frames to the network's input, shared by training
+# and evaluation.
+
 import numpy as np
 import torch
 

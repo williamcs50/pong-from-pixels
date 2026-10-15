@@ -1,3 +1,7 @@
+# src/preprocess.py
+# Turn raw Atari frames into the network's input: 84 by 84 grayscale, the last four
+# frames stacked so the network can see motion.
+
 from collections import deque
 
 import cv2

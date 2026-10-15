@@ -1,3 +1,8 @@
+# src/evaluate.py
+# Score a checkpoint over a number of games at a fixed seed and epsilon. Every script
+# that plays a checkpoint plays through evaluate(), so they all see the same games.
+
+import argparse
 import collections
 import statistics
 
@@ -17,6 +22,18 @@ gymnasium.register_envs(ale_py)
 # Not 0.0: greedy on a barely trained network can stall without serving.
 EVAL_EPSILON = 0.05
 EVAL_EPISODES = 100  # the bar in docs/PLANS.md
+
+
+def check_eval_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    # A usage error now, for settings evaluate() would otherwise play without complaint.
+    if not 0.0 <= args.epsilon <= 1.0:
+        parser.error(f"--epsilon is a probability, so it must be from 0 to 1, got {args.epsilon}")
+    if args.seed < 0:
+        parser.error(f"--seed must be 0 or more, got {args.seed}")
+    if getattr(args, "episodes", 1) < 1:
+        parser.error(f"--episodes must be 1 or more, got {args.episodes}")
+    if not 0.0 <= getattr(args, "repeat_action_probability", 0.0) <= 1.0:
+        parser.error(f"--repeat-action-probability must be from 0 to 1, got {args.repeat_action_probability}")
 
 
 def evaluate(

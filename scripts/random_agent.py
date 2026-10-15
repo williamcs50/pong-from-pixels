@@ -1,3 +1,6 @@
+# scripts/random_agent.py
+# Play Pong with random actions in a game window, the baseline before any training.
+
 import gymnasium as gym
 import ale_py
 

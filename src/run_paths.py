@@ -1,3 +1,6 @@
+# src/run_paths.py
+# Where runs are written, and the next free run-NN folder there.
+
 import os
 import re
 

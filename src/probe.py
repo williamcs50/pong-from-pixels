@@ -1,3 +1,7 @@
+# src/probe.py
+# The 500 fixed game states Q values are measured on, regenerated from PROBE_SEED and
+# identified by their sha256.
+
 import hashlib
 
 import ale_py

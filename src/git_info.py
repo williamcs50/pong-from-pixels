@@ -1,3 +1,7 @@
+# src/git_info.py
+# The commit, whether the working tree was clean, and the software versions, recorded
+# with every run, sweep, and clip.
+
 import os
 import platform
 import subprocess

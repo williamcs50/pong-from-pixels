@@ -1,3 +1,7 @@
+# src/train.py
+# The training loop that scripts/tiny_train.py and scripts/real_train.py both call,
+# with its logs, checkpoints, and instrumentation.
+
 import csv
 import datetime
 import json
