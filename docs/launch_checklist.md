@@ -31,7 +31,7 @@ query above, in that order.
 Nothing in `train()` reads temperature, so this log is the only thermal record and
 it is passive. The card protects itself at 90 °C by dropping its clocks and at
 93 °C by shutting down, so the limit below exists to explain a slow run
-afterwards, not to save the hardware.
+afterward, not to save the hardware.
 
 ## First five minutes
 

@@ -62,7 +62,7 @@ def train_step(q_network: QNetwork, target_network: QNetwork, optimizer: optim.O
 
 def probe_metrics(q_network: QNetwork, probe_tensor: torch.Tensor) -> dict:
     # Levels, not deltas. Drift against step 0, the previous row, or another run is
-    # all derivable afterwards, and computing one of them here picks the baseline
+    # all derivable afterward, and computing one of them here picks the baseline
     # for every later reader.
     with torch.no_grad():
         q_values = q_network(probe_tensor)
