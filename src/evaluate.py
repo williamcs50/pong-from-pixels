@@ -65,8 +65,8 @@ def evaluate(
     q_network.eval()
     torch.manual_seed(seed)
 
-    # A network that was never loaded plays episodes without crashing too, so a no-op
-    # load would otherwise pass every check below.
+    # A network that was never loaded plays episodes without crashing too, so a load
+    # that did nothing would otherwise pass every check below.
     after = q_network.state_dict()
     assert any(not torch.equal(before[k], after[k]) for k in before), (
         f"load_checkpoint changed no weights for {checkpoint_path}"

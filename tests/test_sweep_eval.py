@@ -134,7 +134,7 @@ def test_sweep_end_to_end() -> None:
         assert [int(r["env_step"]) for r in rows] == [0, 50_000, 100_000], f"resume gave {rows}"
         assert "to do: 1" in second.stdout, f"resume should have had one to do:\n{second.stdout}"
         assert len(json.load(open(os.path.join(run_dir, "eval_config.json")))) == 2, "history not appended"
-    print("PASS  sweep honours --through, writes every column, and resumes without redoing rows")
+    print("PASS  sweep honors --through, writes every column, and resumes without redoing rows")
 
 
 def test_sweep_rejects_mislabeled_checkpoint() -> None:

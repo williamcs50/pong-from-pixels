@@ -78,7 +78,7 @@ np.random.seed(SEED)
 obs, _ = env.reset(seed=SEED)
 env.action_space.seed(SEED)
 
-# Step forward so the ball is in play
+# Step forward so the ball is in play.
 for _ in range(60):
     obs, _, terminated, truncated, _ = env.step(env.action_space.sample())
     if terminated or truncated:

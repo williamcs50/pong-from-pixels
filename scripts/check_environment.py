@@ -19,7 +19,7 @@ ADAM_MOMENTS = 2  # first and second moment, one float per Q weight each
 # torch is the one guarded import. requirements.txt deliberately leaves it out
 # and tells you to install it manually for your hardware, so "not installed" is
 # a state this script exists to report, not one it should crash on. Everything
-# torch-dependent, QNetwork included, is unavailable in that case.
+# that depends on torch, QNetwork included, is unavailable in that case.
 try:
     import torch
 

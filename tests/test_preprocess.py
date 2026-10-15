@@ -75,9 +75,9 @@ def test_step_shape() -> None:
 
 
 def test_step_updates_stack() -> None:
-    # Use fake frames here to guarantee the new frame differs from the previous
-    # one. Real consecutive frames from the same env are also fine in practice,
-    # but fake ensures test robustness.
+    # Fake frames, so the new frame is guaranteed to differ from the previous one.
+    # Two real frames in a row can be identical, and then the test would pass even
+    # if step() never updated the stack.
     p = Preprocessor()
     p.reset(make_fake_frame())
     stacked = p.step(make_fake_frame())

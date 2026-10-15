@@ -447,7 +447,7 @@ def report_paddle(steps: list[int], counts: list[list[int]]) -> None:
 
 def report_replay(rows: list[dict[str, str]], steps: list[int], episodes: list[dict[str, str]],
                   config: dict) -> None:
-    # The row at warmup_steps holds a single batch, so only full windows are summarised.
+    # The row at warmup_steps holds a single batch, so only full windows are summarized.
     full = config["metrics_every_steps"] // config["train_every"]
     sampled = [i for i, r in enumerate(rows) if r["batches_in_window"] and int(r["batches_in_window"]) == full]
     if not sampled:

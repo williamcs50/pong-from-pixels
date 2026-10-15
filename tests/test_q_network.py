@@ -59,7 +59,6 @@ def test_target_network_sync() -> None:
 
     optimizer = optim.Adam(online_net.parameters(), lr=1e-3)
 
-    # Confirm target params aren't in the optimizer.
     optimizer_param_ids = {id(p) for group in optimizer.param_groups for p in group["params"]}
     online_param_ids = {id(p) for p in online_net.parameters()}
     target_param_ids = {id(p) for p in target_net.parameters()}
@@ -75,19 +74,16 @@ def test_target_network_sync() -> None:
     loss.backward()
     optimizer.step()
 
-    # Online net took a gradient step, params should have changed.
     for name, online_param in online_net.named_parameters():
         assert not torch.allclose(online_param.detach(), target_snapshot[name]), (
             f"Expected online param '{name}' to change after the optimizer step"
         )
 
-    # Target net isn't in the optimizer, params should be untouched.
     for name, target_param in target_net.named_parameters():
         assert torch.allclose(target_param.detach(), target_snapshot[name]), (
             f"Target param '{name}' changed even though it wasn't in the optimizer"
         )
 
-    # Periodic sync should bring them back into equality.
     target_net.load_state_dict(online_net.state_dict())
 
     for (online_name, online_param), (target_name, target_param) in zip(

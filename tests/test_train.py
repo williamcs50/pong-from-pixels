@@ -169,7 +169,7 @@ def test_train_step_overfits_fixed_batch() -> None:
 
     initial_loss = train_step(q_network, target_network, optimizer, batch, gamma=0.99)
 
-    # 200 calls total, counting the first and the last
+    # 200 calls total, counting the first and the last.
     for _ in range(198):
         train_step(q_network, target_network, optimizer, batch, gamma=0.99)
 

@@ -70,7 +70,7 @@ def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
 
 def test_acting_path() -> None:
     # Runs the live batch of one state through the transform, the network,
-    # select_action, and env.step at every step. The per-step assertions live
+    # select_action, and env.step at every step. The per step assertions live
     # in run_acting_loop, so this only confirms the full loop completes.
     _, _, n_actions = run_acting_loop()
     print(f"PASS  acting path: {N_STEPS} steps, valid actions, q_values (1, {n_actions}), no NaN, on {DEVICE.type}")

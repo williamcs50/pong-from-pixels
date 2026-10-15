@@ -15,7 +15,6 @@ class Preprocessor:
         self.frame_stack = deque(maxlen=stack_size)
 
     def preprocess(self, obs: np.ndarray) -> np.ndarray:
-        # Raw RGB observation to uint8 (84, 84) grayscale frame.
         if len(obs.shape) == 3:
             gray = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
         else:

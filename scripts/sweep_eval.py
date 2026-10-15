@@ -67,7 +67,7 @@ def record_invocation(path: str, settings: dict) -> None:
 
     # A list rather than one object, because the sweep resumes: a restart after a
     # code change produces rows from a different commit and both need recording.
-    # Not refused on a dirty tree the way train() is, since re-scoring a checkpoint
+    # Not refused on a dirty tree the way train() is, since rescoring a checkpoint
     # mid development is normal. The dirty flag says so instead.
     history = json.load(open(path)) if os.path.exists(path) else []
     history.append({**settings, **git_state(), **software_versions(),
