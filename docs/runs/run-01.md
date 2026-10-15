@@ -69,7 +69,7 @@ My reasoning for each value is in the 2026-10-06 entry of
 ## Result
 
 **The agent didn't reach the bar.** The trailing mean over the last 100 episodes never
-got above 0. Its best and final value are both -0.11, at step 1,999,498.
+rose above 0. Its best and final value are both -0.11, at step 1,999,498.
 
 | Step | Trailing 100 mean |
 |---|---|
@@ -107,7 +107,7 @@ moving less than 1.0 across 200 episodes, and by that definition it never platea
 **Supporting evidence that the learning is real, not noise:**
 
 - Mean episode length went from 909 steps over the first 100 episodes to 4,139 over
-  the last 100. Rallies got four and a half times longer.
+  the last 100. Rallies grew four and a half times longer.
 - There were zero shutouts in the last 100 episodes. At the start, every episode was a
   21 to 0 or 21 to 2 loss.
 - Mean loss per episode fell from 0.012179 to 0.001716. It stayed finite the whole run,
@@ -143,7 +143,7 @@ evaluation episodes, so I scored every checkpoint separately at epsilon 0.05, in
 **No checkpoint reaches the bar.** The best is -1.63 at step 1,800,000.
 
 **The best checkpoint isn't the last one.** 1,800,000 beats 2,000,000 by 2.78 points,
-so the policy actually got worse over the last 200,000 steps. I scored both again at
+so the policy actually declined over the last 200,000 steps. I scored both again at
 seed 1 on independent episodes, in [run-01/eval_seed1.csv](run-01/eval_seed1.csv), and
 the result held:
 
@@ -166,8 +166,8 @@ against 4.43. It loses more consistently, while 1,800,000 sometimes wins by more
 training from 800,000 to 1,600,000, by as much as 5.00 points at 1,000,000, then ends
 4.30 below it. The training trailing mean covers roughly the last 400,000 steps, so it
 averages a policy that's changing instead of measuring the final one. While the policy
-is improving, that makes it look worse than it is. At the end, where the policy got
-worse, it makes it look better. The extra exploration at epsilon 0.05 also pulls
+is improving, that makes it look worse than it is. At the end, where the policy
+declined, it makes it look better. The extra exploration at epsilon 0.05 also pulls
 evaluation down the whole way.
 
 That's why training said -0.11 at the final step while the final policy scores -4.41.
@@ -204,7 +204,7 @@ ran at 837.3 steps per second with no GPU work at all, against 248.9 once update
 started.
 
 The warmup pass understated the load, peaking at 52 °C, 1,290 MHz, and 30 W, because it
-never ran long enough to warm up fully. Even so, nothing got close to the limits.
+never ran long enough to warm up fully. Even so, nothing came close to the limits.
 
 ---
 

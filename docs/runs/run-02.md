@@ -334,7 +334,7 @@ the share of transitions sampled in each 10,000 step window where a point was sc
 `batch_done_fraction` is the share that end an episode. Both count the batches the
 updates actually trained on. Over the 595 windows with a full 2,500 batches, the
 reward fraction peaked at 0.025525 at 540,000, about one point every 40 steps. It fell
-to 0.005387 at 3,160,000 as rallies got longer. From 3,400,000 on, every 200,000 step
+to 0.005387 at 3,160,000 as rallies grew longer. From 3,400,000 on, every 200,000 step
 row sits between 0.00914 and 0.01181, and it ended at 0.009787. That late rise lines up
 with the episode length finding in Evaluation: an agent that's winning plays shorter
 games, so points come more often. One thing to keep in mind is that the buffer holds
@@ -386,7 +386,7 @@ per second, against 240.7 once updates started.
 
 **The GPU logger covered the whole run.** Its 827 timestamps go from 11:48:51 to
 18:42:33. It started 31 seconds before the run and kept going after it ended. The gaps
-between samples only range from 30.031 to 30.123 seconds, so nothing got dropped. Run
+between samples only range from 30.031 to 30.123 seconds, so nothing was dropped. Run
 1's first attempt gave me a zero byte file, because `nvidia-smi -l 30 -f` buffered its
 output. This is the proof that the `Add-Content` replacement writes as it goes.
 
