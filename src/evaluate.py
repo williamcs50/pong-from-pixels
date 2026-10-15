@@ -28,8 +28,10 @@ def evaluate(
     repeat_action_probability: float,
     device: torch.device,
     record_video: bool = False,
+    render: bool = False,
 ) -> dict:
-    env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability)
+    env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability,
+                         render_mode="human" if render else None)
     env.action_space.seed(seed)
     n_actions = env.action_space.n
 
