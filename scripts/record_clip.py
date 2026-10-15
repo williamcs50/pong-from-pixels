@@ -1,7 +1,7 @@
 # scripts/record_clip.py
 # Record one checkpoint's clip by the episode and clip window rules in
 # docs/runs/run-02.md: the first episode at evaluation seed 0, played through
-# evaluate(), saved only if two plays agree, cut to its first 30 seconds.
+# evaluate(), saved only if two plays agree, cut to its last 30 seconds.
 #
 #   python scripts/record_clip.py $HOME\pong-runs\run-02\checkpoints\step_05400000.pt
 
@@ -102,17 +102,24 @@ if __name__ == "__main__":
         f"{len(frames)} frames for {result['lengths'][0]} steps, expected one per step plus the reset"
     )
     assert len(q_values) == len(frames) - 1, f"{len(q_values)} Q value rows for {len(frames)} frames"
-    if len(q_values) < CLIP_FRAMES:
+    if len(frames) < CLIP_FRAMES:
         sys.exit(f"the episode has {len(frames)} frames, fewer than the {CLIP_FRAMES} the clip window needs")
 
-    write_video(frames[:CLIP_FRAMES], out)
+    first = len(frames) - CLIP_FRAMES
+    # The final frame has no Q values, since no action follows it, so it repeats the last row.
+    clip_q = q_values[first:] + [q_values[-1]]
+    assert len(clip_q) == CLIP_FRAMES, f"{len(clip_q)} Q value rows for a {CLIP_FRAMES} frame clip"
+
+    write_video(frames[first:], out)
     with open(f"{stem}_q.json", "w") as handle:
         json.dump({
             "fps": FPS,
             "frames": CLIP_FRAMES,
+            "first_episode_frame": first,
+            "last_row_repeats_previous": True,
             "action_names": ACTION_NAMES,
             "paddle_groups": PADDLE_GROUPS,
-            "q_values": [[round(v, 4) for v in row] for row in q_values[:CLIP_FRAMES]],
+            "q_values": [[round(v, 4) for v in row] for row in clip_q],
         }, handle)
     elapsed = time.perf_counter() - started
 
@@ -126,6 +133,7 @@ if __name__ == "__main__":
         "episode_steps": result["lengths"][0],
         "episode_frames": len(frames),
         "clip_frames": CLIP_FRAMES,
+        "clip_first_episode_frame": first,
         "fps": FPS,
         "scale": SCALE,
         "clip_s": CLIP_SECONDS,
@@ -140,4 +148,5 @@ if __name__ == "__main__":
 
     print(f"Saved {out}, {stem}_q.json, and {stem}.json")
     print(f"  episode: reward {record['reward']:+.0f}, {record['episode_steps']} steps")
-    print(f"  clip: the first {CLIP_FRAMES} frames, {CLIP_SECONDS} s at {FPS} fps, took {record['elapsed_s']} s")
+    print(f"  clip: the last {CLIP_FRAMES} frames, from frame {first:,}, {CLIP_SECONDS} s at {FPS} fps, "
+          f"took {record['elapsed_s']} s")
