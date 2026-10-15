@@ -748,3 +748,26 @@ The floor has been met. All four clips are recorded, and every one passed the pl
 - H.264 shrank the clips by far more than the cut alone explains. The 30 second clips are 45 to 63 KB each, against 0.9 to 6.3 MB for the full length `mp4v` versions.
 
 ---
+
+# Thursday: README and Architecture
+
+**Date:** 2026-10-15
+
+**Floor:**
+
+1. **Update the README.** Add Run 2's result, the evaluation sweep (`sweep_eval.py`, built on `evaluate.py`), `analyze_run.py --compare`, recording clips with `record_clip.py`, how to run the tests, and the full list of files a run writes. Done means someone new could go from setup to reproducing Run 2's figures using only the README.
+2. **Bring `architecture.md` up to date.** Its module table names 8 of the 20 modules in `src/` and `scripts/`, and nothing from training, evaluation, instrumentation, or clip recording. Add the other 12, with what each one does and how they connect.
+
+**Aspiration:**
+
+1. **Write `scripts/watch_checkpoint.py`.** A live game window for a trained checkpoint, like `random_agent.py`, so the trained agent can be watched playing without recording a clip.
+
+---
+
+## What landed today
+
+## What's open (carrying forward)
+
+## Anything surprising or worth flagging
+
+---
