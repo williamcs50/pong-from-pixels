@@ -1,11 +1,12 @@
 # scripts/real_train.py
-# Run 1 on the 2060, through the same train() as scripts/tiny_train.py.
+# The real runs on the 2060, through the same train() as scripts/tiny_train.py.
 # The reasoning behind each value is in the 2026-10-06 entry of docs/sessions.md.
 #
-# The warmup pass before Run 1 is this same script with a shorter step count, so
-# the rate it measures comes from the code path Run 1 actually uses:
-#   python scripts/real_train.py --total-steps 70000     warmup pass
-#   python scripts/real_train.py                         Run 1
+# The warmup pass before each run is this same script with a shorter step count, so
+# the rate it measures comes from the code path the run actually uses:
+#   python scripts/real_train.py --total-steps 120000     warmup pass
+#   python scripts/real_train.py                          Run 1
+#   python scripts/real_train.py --total-steps 6000000    Run 2
 
 import argparse
 import os
