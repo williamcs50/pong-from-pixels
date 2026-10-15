@@ -22,7 +22,7 @@ import imageio_ffmpeg
 import numpy as np
 import torch
 
-from src.evaluate import EVAL_EPSILON, evaluate
+from src.evaluate import EVAL_EPSILON, check_eval_args, evaluate
 from src.git_info import git_state, software_versions
 
 FRAMESKIP = 4  # Pong v5 repeats each action for 4 emulator frames
@@ -59,7 +59,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)
     parser.add_argument("--rally", action="store_true",
                         help="apply the first rally clip rule: search seeds for a rally and cut around it")
-    return parser.parse_args()
+    parser.add_argument("--overwrite", action="store_true",
+                        help="replace a clip already at --out instead of refusing")
+    args = parser.parse_args()
+    # Otherwise ffmpeg rejects it only after both plays.
+    if args.out is not None and not args.out.lower().endswith(".mp4"):
+        parser.error(f"--out must end in .mp4, got {args.out}")
+    check_eval_args(parser, args)
+    return args
 
 
 def ball_x(frame: np.ndarray) -> float | None:
@@ -69,14 +76,14 @@ def ball_x(frame: np.ndarray) -> float | None:
 
 
 def return_frames(frames: list[np.ndarray]) -> list[int]:
-    """Return the frames where the ball, moving toward the agent, turns back beside its paddle."""
+    # The frames where the ball, moving toward the agent, turns back beside its paddle.
     xs = [ball_x(frame) for frame in frames]
     return [i for i in range(1, len(xs) - 1)
             if None not in xs[i - 1:i + 2] and xs[i - 1] < xs[i] > xs[i + 1] and xs[i] > RETURN_ZONE]
 
 
 def rally_start(returns: list[int]) -> int | None:
-    """Return the first return that begins RALLY_RETURNS returns within one clip window."""
+    # The first return that begins RALLY_RETURNS returns within one clip window.
     for i in range(len(returns) - RALLY_RETURNS + 1):
         if returns[i + RALLY_RETURNS - 1] - returns[i] < CLIP_FRAMES:
             return returns[i]
@@ -121,6 +128,10 @@ if __name__ == "__main__":
     out = args.out or os.path.join(run_dir, "clips", f"{name}.mp4")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     stem = os.path.splitext(out)[0]
+    # A rerun with other settings would otherwise replace a clip already checked.
+    existing = [path for path in (out, f"{stem}_q.json", f"{stem}.json") if os.path.exists(path)]
+    if existing and not args.overwrite:
+        sys.exit(f"{', '.join(existing)} already exist(s). Pass --overwrite to replace, or choose another --out.")
 
     started = time.perf_counter()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import torch
 
-from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, evaluate
+from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, check_eval_args, evaluate
 
 
 def parse_args() -> argparse.Namespace:
@@ -20,7 +20,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--repeat-action-probability", type=float, default=0.0)
-    return parser.parse_args()
+    args = parser.parse_args()
+    check_eval_args(parser, args)
+    return args
 
 
 if __name__ == "__main__":
