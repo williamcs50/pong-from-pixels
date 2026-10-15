@@ -118,9 +118,9 @@ Batch size starts at 32 or 64 and profiles upward. Both networks, activations, g
 src/action_selector.py       Action selector
 src/preprocess.py            Preprocessing
 src/q_network.py             Q-Network and target-network logic
-src/random_agent.py          Baseline random agent
 src/replay_buffer.py         Replay buffer
 src/transform.py             Shared transform (uint8 HWC to normalized float32 NCHW)
 scripts/check_environment.py Environment verification
+scripts/random_agent.py      Baseline random agent
 scripts/visual_check.py      Optional visual inspection helper
 ```

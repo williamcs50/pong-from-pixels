@@ -50,7 +50,7 @@ python -m pytest -q
 ## Run the random agent
 
 ```bash
-python src/random_agent.py
+python scripts/random_agent.py
 ```
 
 ## Train
