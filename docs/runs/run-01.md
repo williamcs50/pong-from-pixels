@@ -1,7 +1,7 @@
 # Run 1
 
 My first real training run. Every number here comes from the run's own files, which
-are committed in [run-01/](run-01/): `run_config.json`, `episodes.csv`, `gpu_log.csv`
+are committed in [run-01/](run-01/): `run_config.json`, `episodes.csv`, `gpu_log.csv`,
 and the two evaluation files. The warmup pass's three files are in
 [run-00-warmup/](run-00-warmup/). The commands that produce every number are at the
 bottom. The checkpoints aren't committed, at 1.02 GiB (1.09 GB), so I measured their
@@ -175,7 +175,7 @@ The number I quoted as Run 1's result never actually measured the policy the run
 with.
 
 **The eleven rows in `eval.csv` came before I added provenance tracking.** So they
-have no commit hash, no standard deviation and no seed column. They were produced at
+have no commit hash, no standard deviation, and no seed column. They were produced at
 seed 0. The seed 1 rows have a full sidecar in
 [run-01/eval_seed1_config.json](run-01/eval_seed1_config.json).
 
@@ -203,14 +203,14 @@ preprocessing, and the Python loop running every step. The fill phase before tra
 ran at 837.3 steps per second with no GPU work at all, against 248.9 once updates
 started.
 
-The warmup pass understated the load, peaking at 52 °C, 1,290 MHz and 30 W, because it
+The warmup pass understated the load, peaking at 52 °C, 1,290 MHz, and 30 W, because it
 never ran long enough to warm up fully. Even so, nothing got close to the limits.
 
 ---
 
 ## Reproducing the figures
 
-Every training, evaluation and hardware number above comes out of one command, run
+Every training, evaluation, and hardware number above comes out of one command, run
 from the repository root:
 
 ```powershell
