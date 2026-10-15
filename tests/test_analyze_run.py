@@ -23,7 +23,7 @@ EXTERNAL = (
     "roughly 95 million", "8,000,000 frames", "Nature's 50,000,000", "Nature's 1,000,000",
     "1.2M", "across 200 episodes", "gained 2.56 points", "about 5 combined", "about 50 minutes",
     "51.3 W", "or 51 W",
-    "first 30 seconds", "450 frames at 15 fps", "frame 450", "six Q values",
+    "first 30 seconds", "450 frames at 15 fps", "frame 450", "six Q values", "304 steps longer", "last 30 seconds", "last 30 end", "last 450 frames",
 )
 
 

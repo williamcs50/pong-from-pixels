@@ -451,6 +451,14 @@ ends. The page loops each clip, muted, so it ends wherever frame 450 falls. Each
 also saves the six Q values the network computed for every frame it shows, so the
 page's Q value bars and win estimate come from the same episode as the footage.
 
+**Clip window, revised.** Changed after cutting the first 30 seconds, and committed
+before cutting again. Each clip is now the last 30 seconds of its episode, the last 450
+frames, ending on the frame where the final point is scored. The first 30 seconds only
+showed how each game opens, while the last 30 end on its result, with the final score on
+screen. The window is still the same for all four, so the change applies to every clip
+and not just the one that ends in a win. No action follows the final frame, so it has
+no Q values of its own, and it repeats the frame before it.
+
 ---
 
 ## Limitations
