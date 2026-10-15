@@ -717,8 +717,34 @@ The floor has been met. Item 2 is reported as an observation, since the rule was
 
 ## What landed today
 
+The floor has been met. All four clips are recorded, and every one passed the play twice check on the GPU. The aspiration wasn't done.
+
+- I added recording to `evaluate()`. With `record_video=True`, it keeps every raw frame of episode 1, and recording doesn't change the episode it plays.
+- `evaluate()` couldn't evaluate step 0 twice in one process. It left torch seeded, so a second call's fresh network matched step 0's weights and the load check stopped it. It now zeroes the network before loading, which is why the Random clip could play twice and agree. `tests/test_evaluate.py` covers both this and recording.
+- I reran 5,400,000 for 100 episodes after the changes. It scored +16.97 again, exactly matching the sweep, so scoring is unchanged. It won all 100 games.
+- `scripts/record_clip.py` plays the episode twice, saves only if both plays agree, and falls back to CPU if they don't. It writes a 30 second clip as H.264 through `imageio-ffmpeg`, since OpenCV on this machine can't encode H.264, plus a `_q.json` with the six Q values for every frame and a `.json` record.
+- I added a clip window rule to run-02.md, the first 30 seconds of each episode, and committed it before cutting. After cutting, I revised it to the last 30 seconds, so every clip ends on its result with the final score on screen, and committed that before cutting again.
+- The seed 0 episode at 600,000 never returns the ball, so its clip didn't show a rally. I added a first rally clip rule and committed it before recording. It tries seeds in order, takes the first episode with 3 returns within 30 seconds, and starts the clip 2 seconds before them. `record_clip.py --rally` applies it, and `tests/test_record_clip.py` tests the return counting.
+- I recorded the final four clips. Each passed the play twice check on the GPU:
+  - **Random, 0:** seed 0, reward -21 (lost 21 to 0), 824 steps, the last 30 seconds, recorded in 3.0 s.
+  - **First rally, 600,000:** seed 6, reward -18 (lost 21 to 3), 1,517 steps, the 30 seconds around its first rally, recorded in 20.6 s including the seed search.
+  - **First over the bar, 2,800,000:** seed 0, reward +6 (won 21 to 15), 4,796 steps, the last 30 seconds, recorded in 14.2 s.
+  - **Trained, 5,400,000:** seed 0, reward +18 (won 21 to 3), 2,386 steps, the last 30 seconds, recorded in 7.3 s.
+- Three clips were recorded at `f1ba9d8` and first rally at `4f56a27`, all with a clean working tree. The records include the `imageio-ffmpeg` version, which `git_info.py` now records. `analyze_run.py` prints each clip's seed, start frame, and returns, and run-02.md's Clip selection now covers all three rules and the final clips.
+- Every function now has type hints, every test helper has a docstring, 24 comments that only restated the code are gone, and a comment in `train.py` that had been split in two is back in one piece. All 70 tests pass.
+
 ## What's open (carrying forward)
 
+- The README is still out of date, since the aspiration wasn't done.
+- The case study page has to play the clips muted, inline, and looping, with `<video autoplay muted loop playsinline>`, and draw its Q value bars from each clip's `_q.json`.
+- `scripts/watch_checkpoint.py`, a live game window for a trained checkpoint like `random_agent.py`, wasn't started.
+- `architecture.md` still names 8 of 19 modules.
+
 ## Anything surprising or worth flagging
+
+- The step 0 bug had been there all along and never showed up, because the sweep and the rescore both scored step 0 first in a fresh process. Playing each clip twice was the first time anything evaluated step 0 twice.
+- Episode length was a weaker stand in for rallies than I expected. The rule picked 600,000 because its episodes run longer, and returns really do start there, but they're patchy: across seeds 0 to 8, six episodes return the ball at least once and only a few return it several times. The seed 0 episode returns it zero times in 1,128 steps.
+- The first rally clip is the first one where the agent scores, taking 3 points before losing 21 to 3.
+- H.264 shrank the clips by far more than the cut alone explains. The 30 second clips are 45 to 63 KB each, against 0.9 to 6.3 MB for the full length `mp4v` versions.
 
 ---

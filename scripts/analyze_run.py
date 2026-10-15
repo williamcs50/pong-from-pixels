@@ -10,6 +10,7 @@
 import argparse
 import bisect
 import csv
+import glob
 import json
 import math
 import os
@@ -58,6 +59,7 @@ CONFIG_KEYS = (
     "probe_states", "probe_sha256", "device_name", "n_actions",
     "python_version", "python_executable", "torch_version", "torch_cuda_version", "cudnn_version",
     "gymnasium_version", "ale-py_version", "numpy_version", "opencv-python-headless_version",
+    "imageio-ffmpeg_version",
 )
 
 
@@ -587,6 +589,23 @@ def report_clip_selection(run: dict) -> None:
     line("trained", f"{best:,}, seed 0 {score(seed0[best]):+.2f}{quoted}")
     if best == over:
         line("note", "trained and first over the bar are one checkpoint, so one clip covers both")
+
+    clip_dir = os.path.join(run["dir"], "clips")
+    records = sorted(glob.glob(os.path.join(clip_dir, "step_*[0-9].json")))
+    if not records:
+        return
+    print("\nrecorded clips")
+    print(f"{INDENT}     step  seed  reward  episode steps  from frame  clip frames  returns in clip  "
+          f"q rows  agreed  device  commit   dirty")
+    for path in records:
+        record = json.load(open(path))
+        q_rows = len(json.load(open(path.replace(".json", "_q.json")))["q_values"])
+        # Clips recorded before return counting existed have no count to report.
+        returns = len(record["clip_return_frames"]) if "clip_return_frames" in record else "not counted"
+        print(f"{INDENT}{record['env_step']:>9,}  {record['seed']:>4}  {record['reward']:+6.0f}  "
+              f"{record['episode_steps']:>13,}  {record.get('clip_first_episode_frame', 0):>10,}  "
+              f"{record['clip_frames']:>11}  {returns:>15}  {q_rows:>6}  {str(record['plays_agreed']):>6}  "
+              f"{record['device']:>6}  {record['git_commit'][:7]}  {record['git_dirty']}")
 
 
 def report_compare(run: dict, other: dict) -> None:

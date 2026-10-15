@@ -49,12 +49,14 @@ def updates_by(step: int) -> int:
 
 
 def scheduled_epsilon(loop_index: int) -> float:
+    """Return the epsilon train() computes at a loop index under CONFIG."""
     fraction = min(loop_index / CONFIG["epsilon_decay_steps"], 1.0)
     return CONFIG["epsilon_start"] + fraction * (CONFIG["epsilon_end"] - CONFIG["epsilon_start"])
 
 
 @functools.lru_cache(maxsize=None)
 def tiny_run() -> str:
+    """Run train() once on CONFIG and return its output directory, shared by every test."""
     root = tempfile.mkdtemp()
     atexit.register(shutil.rmtree, root, ignore_errors=True)
     probe_path = os.path.join(root, "probe_in.npy")
@@ -66,6 +68,7 @@ def tiny_run() -> str:
 
 
 def read(name: str) -> list[dict]:
+    """Return the rows of one of the tiny run's CSV files."""
     with open(os.path.join(tiny_run(), name), newline="") as handle:
         return list(csv.DictReader(handle))
 

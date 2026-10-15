@@ -443,6 +443,56 @@ All four are different checkpoints, so the slider keeps four positions. 200,000 
 than step 0's, at 764 and 769 steps. The episode check, playing each clip twice, comes
 when I record the clips.
 
+**Clip window.** Written after a first recording of all four episodes, and committed
+before any clip is cut. Each clip on the page is the first 30 seconds of its
+episode, 450 frames at 15 fps, starting from the reset frame. The window is the same
+for all four, and every episode is longer than it, so no clip is chosen by where it
+ends. The page loops each clip, muted, so it ends wherever frame 450 falls. Each clip
+also saves the six Q values the network computed for every frame it shows, so the
+page's Q value bars and win estimate come from the same episode as the footage.
+
+**Clip window, revised.** Changed after cutting the first 30 seconds, and committed
+before cutting again. Each clip is now the last 30 seconds of its episode, the last 450
+frames, ending on the frame where the final point is scored. The first 30 seconds only
+showed how each game opens, while the last 30 end on its result, with the final score on
+screen. The window is still the same for all four, so the change applies to every clip
+and not just the one that ends in a win. No action follows the final frame, so it has
+no Q values of its own, and it repeats the frame before it.
+
+**First rally clip, revised.** The seed 0 episode at 600,000 never returns the ball, so
+its last 30 seconds didn't show the milestone the clip is named for. Counting returns
+across seeds 0 to 8 showed they're real at 600,000 but patchy: six of the nine episodes
+return the ball at least once, and only a few return it several times close together.
+This rule was written after seeing those counts, and committed before recording. The
+first rally clip comes from the first episode, trying evaluation seeds 0, 1, 2 and so
+on in order, with at least 3 returns within 30 seconds, and starts 2 seconds before the
+first of those returns. A return is the ball moving toward the agent's paddle and
+turning back beside it. The other three clips keep the seed 0 episode and its last 30
+seconds.
+
+**Clips.** All four passed the episode check on the GPU, so the CPU fallback was never
+needed:
+
+| Milestone | Checkpoint | Seed | Reward | Steps | Clip starts at frame |
+|---|---|---|---|---|---|
+| Random | 0 | 0 | -21 | 824 | 375 |
+| First rally | 600,000 | 6 | -18 | 1,517 | 187 |
+| First over the bar | 2,800,000 | 0 | +6 | 4,796 | 4,347 |
+| Trained | 5,400,000 | 0 | +18 | 2,386 | 1,937 |
+
+Searching seeds in order, the first rally rule passed over seeds 0 to 5 and stopped at
+seed 6. Its episode has 7 returns, 4 of them inside the clip, and it is the first clip
+where the agent scores at all, taking 3 points before losing. The other three clips end
+on the final point of their seed 0 episode.
+
+Each clip is in [run-02/clips/](run-02/clips/) as an H.264 video, a `_q.json` with the
+six Q values for each of its 450 frames, and a `.json` record of the episode, the
+commit, and the software versions. Random, first over the bar, and trained were
+recorded at `f1ba9d8`, and first rally at `4f56a27`, all with a clean working tree. The
+first rally clip was recorded twice, and the first time the clip files from the earlier
+window were still uncommitted, so its record showed a dirty tree. The second recording
+played the identical episode with nothing uncommitted.
+
 ---
 
 ## Limitations

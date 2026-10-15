@@ -2,6 +2,7 @@ gymnasium
 ale-py
 pygame
 opencv-python-headless
+imageio-ffmpeg
 numpy
 pytest
 
