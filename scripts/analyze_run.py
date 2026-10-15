@@ -58,6 +58,7 @@ CONFIG_KEYS = (
     "probe_states", "probe_sha256", "device_name", "n_actions",
     "python_version", "python_executable", "torch_version", "torch_cuda_version", "cudnn_version",
     "gymnasium_version", "ale-py_version", "numpy_version", "opencv-python-headless_version",
+    "imageio-ffmpeg_version",
 )
 
 

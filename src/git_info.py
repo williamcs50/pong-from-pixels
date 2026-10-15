@@ -8,7 +8,7 @@ import torch
 
 # The packages whose behaviour reaches a run's numbers. Read from what is installed,
 # since requirements.txt pins nothing.
-PACKAGES = ("gymnasium", "ale-py", "numpy", "opencv-python-headless")
+PACKAGES = ("gymnasium", "ale-py", "numpy", "opencv-python-headless", "imageio-ffmpeg")
 
 
 def git_state() -> dict:
