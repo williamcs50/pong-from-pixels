@@ -579,9 +579,6 @@ exactly on all six checkpoints. It took 17.9 minutes:
 python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --through 1000000 --out $HOME\pong-runs\run-02\eval_lengths.csv
 ```
 
-In PowerShell, use `$HOME` instead of `~`. PowerShell passes `~` to the script as is,
-and the script doesn't expand it.
-
 The 256.1 steps per second my projection used comes from the warmup pass. Comparing
 against it gives the 6.47 hour projection and the 6.3 percent miss:
 

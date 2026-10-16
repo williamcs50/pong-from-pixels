@@ -227,9 +227,6 @@ refuses to append to a file with different columns, so a rerun needs a new `--ou
 python scripts/sweep_eval.py $HOME\pong-runs\run-01 --every 200000 --out $HOME\pong-runs\run-01\eval_rerun.csv
 ```
 
-In PowerShell, use `$HOME` instead of `~`. PowerShell passes `~` to the script as is,
-and the script doesn't expand it.
-
 The warmup pass's own figures, including the 252.1 steps per second my projection
 used, come from the analyzer pointed at the other directory:
 
