@@ -148,7 +148,7 @@ Watching or evaluating a run needs its checkpoints. You can train your own, or d
 
 | Release | Checkpoints | Size |
 |---|---|---|
-| [run-02-checkpoints](https://github.com/williamcs50/pong-from-pixels/releases/tag/run-02-checkpoints) | 121, every 50,000 steps to 6,000,000 | 3.3 GB |
+| [run-02-checkpoints](https://github.com/williamcs50/pong-from-pixels/releases/tag/run-02-checkpoints) | 121, every 50,000 steps to 6,000,000, plus `probe.npy` | 3.3 GB |
 | [run-01-checkpoints](https://github.com/williamcs50/pong-from-pixels/releases/tag/run-01-checkpoints) | 41, every 50,000 steps to 2,000,000 | 1.1 GB |
 | [run-02-warmup-checkpoints](https://github.com/williamcs50/pong-from-pixels/releases/tag/run-02-warmup-checkpoints) | 4 | 0.1 GB |
 | [run-00-warmup-checkpoints](https://github.com/williamcs50/pong-from-pixels/releases/tag/run-00-warmup-checkpoints) | 4 | 0.1 GB |
@@ -198,6 +198,8 @@ foreach ($run in "run-00-warmup", "run-01", "run-02-warmup", "run-02") {
 ```
 
 You should see 4, 41, 4, and 121. If any number is lower, run the download loop again.
+
+Run 2's Release also has its original `probe.npy`, the 500 states its Q values were measured on. Training rebuilds the same states from a seed, so you only need it to measure on Run 2's exact states if a future version of the game emulator ever rebuilds them differently. The loops above save it in the `checkpoints` folder. Move it up one level, to `~/pong-runs/run-02/`, where a run keeps it.
 
 ## Watch it play
 
