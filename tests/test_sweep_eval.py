@@ -31,7 +31,8 @@ def write_checkpoint(directory: str, name_step: int, held_step: int | None = Non
 
 def run_sweep(run_dir: str, *extra: str) -> subprocess.CompletedProcess:
     """Run sweep_eval.py at one episode per checkpoint and return the finished process."""
-    # CPU, so the test neither needs a GPU nor competes with a sweep already on one.
+    # Off the NVIDIA GPU, so the test can't compete with a sweep already on it. On an
+    # Apple Silicon Mac it still runs on the Mac's own GPU, which nothing else is using.
     # "-1" rather than "": an empty value leaves torch reporting CUDA with no device.
     env = {**os.environ, "CUDA_VISIBLE_DEVICES": "-1"}
     return subprocess.run([sys.executable, SCRIPT, run_dir, "--episodes", "1", *extra],
@@ -122,7 +123,8 @@ def test_sweep_end_to_end() -> None:
 
         first = run_sweep(run_dir, "--every", "50000", "--through", "50000")
         assert first.returncode == 0, first.stderr
-        assert "Device: cpu" in first.stdout, f"sweep did not run on CPU:\n{first.stdout}"
+        assert "Device: cpu" in first.stdout or "Device: mps" in first.stdout, (
+            f"sweep did not stay off the NVIDIA GPU:\n{first.stdout}")
         rows = read_rows(out)
         assert [int(r["env_step"]) for r in rows] == [0, 50_000], f"--through gave {rows}"
         assert list(rows[0]) == sweep_eval.COLUMNS, f"columns {list(rows[0])}"
