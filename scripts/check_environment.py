@@ -82,9 +82,6 @@ def check_vram_baseline() -> None:
     target_network.load_state_dict(q_network.state_dict())
     weights = torch.cuda.memory_allocated() - before_networks
     print(f"OK  both networks resident: {weights / mib:.1f} MiB")
-    if before_networks:
-        print(f"NOTE  {before_networks / mib:.1f} MiB was already allocated before the networks, "
-              f"the cuBLAS workspace from check_torch's matrix multiply")
 
     # Optimizer state is allocated lazily, so it only appears once a real step runs.
     optimizer = torch.optim.Adam(q_network.parameters(), lr=REAL_CONFIG["learning_rate"])
@@ -105,8 +102,6 @@ def check_vram_baseline() -> None:
     train_step(q_network, target_network, optimizer, batch, REAL_CONFIG["gamma"])
     print(f"OK  training step at batch {batch_size}: {(steady - before_networks) / mib:.1f} MiB resident, "
           f"peak {(torch.cuda.max_memory_allocated() - steady) / mib:.1f} MiB above it")
-    # Confirmed by setting CUBLAS_WORKSPACE_CONFIG, which resized this block and the one above.
-    print("NOTE  resident includes a second cuBLAS workspace, created for the backward pass's own thread")
     print("NOTE  these count this process's tensors only. nvidia-smi and gpu_log.csv report the whole "
           "card, including the CUDA context and other programs")
 
@@ -153,8 +148,6 @@ def check_buffer_ram(capacity: int = 100_000) -> None:
     per_transition = sum(field.nbytes for field in fields) // sample_size
     total_gib = per_transition * capacity / 1024 ** 3
     print(f"OK  replay buffer at capacity {capacity:,}: {total_gib:.2f} GiB host RAM ({per_transition:,} bytes/transition)")
-    # np.zeros reserves all of it in __init__, so it fits at startup or not at all.
-    print("NOTE  buffer RAM is allocated eagerly at construction, and state/next_state store every frame twice")
 
 
 if __name__ == "__main__":
