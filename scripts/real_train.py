@@ -47,6 +47,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
+        type=os.path.expanduser,
         default=None,
         help=f"defaults to the next run-NN under {RUNS_ROOT}",
     )
@@ -58,6 +59,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--probe",
+        type=os.path.expanduser,
         default=REAL_CONFIG["probe_path"],
         help="reuse an earlier run's probe.npy, so Q figures are measured on byte "
              "identical states. Defaults to generating one from PROBE_SEED.",

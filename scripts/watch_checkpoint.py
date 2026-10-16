@@ -22,7 +22,7 @@ TRAINED = os.path.join(os.path.expanduser("~"), "pong-runs", "run-02", "checkpoi
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Watch a saved checkpoint play Pong in a window.")
-    parser.add_argument("checkpoint", nargs="?", default=TRAINED,
+    parser.add_argument("checkpoint", nargs="?", type=os.path.expanduser, default=TRAINED,
                         help="path to a step_NNNNNNNN.pt file, defaults to Run 2's step 5,400,000")
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)

@@ -52,8 +52,8 @@ MAX_RALLY_SEEDS = 100
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Record one checkpoint's evaluation episode as a clip.")
-    parser.add_argument("checkpoint", help="path to a step_NNNNNNNN.pt file")
-    parser.add_argument("--out", default=None,
+    parser.add_argument("checkpoint", type=os.path.expanduser, help="path to a step_NNNNNNNN.pt file")
+    parser.add_argument("--out", type=os.path.expanduser, default=None,
                         help="defaults to <run_dir>/clips/<checkpoint name>.mp4")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)

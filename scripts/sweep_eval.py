@@ -28,7 +28,7 @@ COLUMNS = ["env_step", "episodes", "epsilon", "seed", "mean_reward", "std_reward
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate every Nth checkpoint of a run.")
-    parser.add_argument("run_dir", help="a run directory holding checkpoints/")
+    parser.add_argument("run_dir", type=os.path.expanduser, help="a run directory holding checkpoints/")
     parser.add_argument(
         "--every",
         type=int,
@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repeat-action-probability", type=float, default=0.0)
     parser.add_argument("--through", type=int, default=None,
                         help="evaluate only checkpoints up to and including this step")
-    parser.add_argument("--out", default=None, help="defaults to <run_dir>/eval.csv")
+    parser.add_argument("--out", type=os.path.expanduser, default=None, help="defaults to <run_dir>/eval.csv")
     args = parser.parse_args()
     check_eval_args(parser, args)
     if args.every < 1:

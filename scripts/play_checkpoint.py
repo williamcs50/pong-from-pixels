@@ -15,7 +15,7 @@ from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, check_eval_args, evaluate
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Play episodes from a saved checkpoint.")
-    parser.add_argument("checkpoint", help="path to a step_NNNNNNNN.pt file")
+    parser.add_argument("checkpoint", type=os.path.expanduser, help="path to a step_NNNNNNNN.pt file")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)
     parser.add_argument("--seed", type=int, default=0)

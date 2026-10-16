@@ -65,8 +65,9 @@ CONFIG_KEYS = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Report a run's figures from its own logs.")
-    parser.add_argument("run_dir", help="directory holding episodes.csv, gpu_log.csv and run_config.json")
-    parser.add_argument("--compare", help="another run directory to compare this one against")
+    parser.add_argument("run_dir", type=os.path.expanduser,
+                        help="directory holding episodes.csv, gpu_log.csv, and run_config.json")
+    parser.add_argument("--compare", type=os.path.expanduser, help="another run directory to compare this one against")
     return parser.parse_args()
 
 
