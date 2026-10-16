@@ -11,7 +11,7 @@ from importlib import metadata
 import torch
 
 # The packages whose behavior reaches a run's numbers. Read from what is installed,
-# since requirements.txt pins nothing.
+# since requirements.txt only pins OpenCV and numpy.
 PACKAGES = ("gymnasium", "ale-py", "numpy", "opencv-python-headless", "imageio-ffmpeg")
 
 

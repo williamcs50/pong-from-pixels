@@ -1,9 +1,9 @@
 gymnasium
 ale-py
 pygame
-opencv-python-headless
+opencv-python-headless==4.12.0.88
 imageio-ffmpeg
-numpy
+numpy<2.3
 pytest
 
 # torch is not listed here because the right install command depends on your hardware.
