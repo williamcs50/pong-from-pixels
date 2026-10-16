@@ -22,6 +22,7 @@ import imageio_ffmpeg
 import numpy as np
 import torch
 
+from src.device import pick_device
 from src.evaluate import EVAL_EPSILON, check_eval_args, evaluate
 from src.git_info import git_state, software_versions
 
@@ -134,7 +135,7 @@ if __name__ == "__main__":
         sys.exit(f"{', '.join(existing)} already exist(s). Pass --overwrite to replace, or choose another --out.")
 
     started = time.perf_counter()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = pick_device()
     print(f"Checkpoint: {checkpoint}")
 
     seed = args.seed
