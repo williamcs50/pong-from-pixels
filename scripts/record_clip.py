@@ -5,8 +5,8 @@
 # the first rally clip rule instead: the first seed whose episode has a rally, cut
 # to start just before it.
 #
-#   python scripts/record_clip.py $HOME\pong-runs\run-02\checkpoints\step_05400000.pt
-#   python scripts/record_clip.py $HOME\pong-runs\run-02\checkpoints\step_00600000.pt --rally
+#   python scripts/record_clip.py ~/pong-runs/run-02/checkpoints/step_05400000.pt
+#   python scripts/record_clip.py ~/pong-runs/run-02/checkpoints/step_00600000.pt --rally
 
 import argparse
 import datetime

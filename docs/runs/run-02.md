@@ -562,8 +562,8 @@ Both sweeps were written before the sweep added its `std_episode_steps` column. 
 refuses to append to a file with different columns, so a rerun needs a new `--out`:
 
 ```powershell
-python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --out $HOME\pong-runs\run-02\eval_rerun.csv
-python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --seed 1 --out $HOME\pong-runs\run-02\eval_seed1_rerun.csv
+python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --out ~/pong-runs/run-02/eval_rerun.csv
+python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --seed 1 --out ~/pong-runs/run-02/eval_seed1_rerun.csv
 ```
 
 The first rally rule in Clip selection uses
@@ -576,7 +576,7 @@ doesn't affect scoring: recording the software versions in the sweep's config. I
 exactly on all six checkpoints. It took 17.9 minutes:
 
 ```powershell
-python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --through 1000000 --out $HOME\pong-runs\run-02\eval_lengths.csv
+python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --through 1000000 --out ~/pong-runs/run-02/eval_lengths.csv
 ```
 
 The 256.1 steps per second my projection used comes from the warmup pass. Comparing

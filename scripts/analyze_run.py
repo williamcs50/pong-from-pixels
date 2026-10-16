@@ -14,6 +14,7 @@ import glob
 import json
 import math
 import os
+import re
 import subprocess
 from datetime import datetime
 
@@ -531,8 +532,13 @@ def report_throughput(run: dict) -> None:
         line("training forward passes", f"{updates * config['batch_size'] * NETWORKS_PER_UPDATE:,}")
 
     if config:
-        checkpoints = os.path.join(config["output_dir"], "checkpoints")
-        if os.path.isdir(checkpoints):
+        # The recorded path is the training machine's, so on another machine look in
+        # its own ~/pong-runs, where the release downloads go.
+        name = re.split(r"[\\/]", config["output_dir"].rstrip("\\/"))[-1]
+        candidates = [config["output_dir"], os.path.join(os.path.expanduser("~"), "pong-runs", name)]
+        checkpoints = next((os.path.join(c, "checkpoints") for c in candidates
+                            if os.path.isdir(os.path.join(c, "checkpoints"))), "")
+        if checkpoints:
             files = [os.path.join(checkpoints, f) for f in os.listdir(checkpoints) if f.endswith(".pt")]
             size = sum(os.path.getsize(f) for f in files)
             line("checkpoints on disk", f"{len(files)} files, {size / BYTES_PER_GIB:.2f} GiB, "

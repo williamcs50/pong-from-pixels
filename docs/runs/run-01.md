@@ -224,7 +224,7 @@ committed, so it only works on the machine that produced the run. The sweep take
 refuses to append to a file with different columns, so a rerun needs a new `--out`:
 
 ```powershell
-python scripts/sweep_eval.py $HOME\pong-runs\run-01 --every 200000 --out $HOME\pong-runs\run-01\eval_rerun.csv
+python scripts/sweep_eval.py ~/pong-runs/run-01 --every 200000 --out ~/pong-runs/run-01/eval_rerun.csv
 ```
 
 The warmup pass's own figures, including the 252.1 steps per second my projection

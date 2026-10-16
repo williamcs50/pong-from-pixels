@@ -4,7 +4,7 @@
 # the window shows the same episodes the sweep scored at the same seed and epsilon.
 #
 #   python scripts/watch_checkpoint.py
-#   python scripts/watch_checkpoint.py $HOME\pong-runs\run-02\checkpoints\step_00600000.pt
+#   python scripts/watch_checkpoint.py ~/pong-runs/run-02/checkpoints/step_00600000.pt
 
 import argparse
 import os
