@@ -56,7 +56,7 @@ On Linux:
 while true; do nvidia-smi --query-gpu=timestamp,temperature.gpu,clocks.sm,power.draw,utilization.gpu,memory.used --format=csv,noheader >> ~/pong-runs/my-run/gpu_log.csv; sleep 30; done
 ```
 
-On a Mac, skip this terminal, along with the temperature checks below. macOS doesn't support CUDA, so training runs on the CPU, and a full run will take far longer than the 6.88 hours Run 2 took on the RTX 2060.
+On a Mac, skip this terminal, along with the temperature checks below, since `nvidia-smi` only works with NVIDIA cards. An Apple Silicon Mac trains on its built in GPU, and an older Intel Mac trains on the CPU. Neither has been timed, so don't expect the 6.88 hours Run 2 took on the RTX 2060.
 
 Leave this terminal open for the whole run. The loop never stops by itself, so press Ctrl+C in it once training has finished.
 
@@ -85,7 +85,7 @@ Nothing in `train()` reads the temperature, so this log is the only record of it
 ## First five minutes
 
 - [ ] The `Output directory:` line near the top of the output is the folder you made, the same one `gpu_log.csv` is going into.
-- [ ] The startup block matches the config: your GPU named, or the CPU on a Mac, sticky actions `0.0`, six action meanings, output size 6, and the seed you set.
+- [ ] The startup block matches the config: `Training device:` names your NVIDIA card, or says `Apple GPU (MPS)` on an Apple Silicon Mac, or `CPU`, then sticky actions `0.0`, six action meanings, output size 6, and the seed you set.
 - [ ] The `git_commit` in `run_config.json` matches `HEAD`. Record it in the day's entry.
 - [ ] Steps per second after the buffer fills, not before. Only that rate predicts the full run. `python scripts/analyze_run.py ~/pong-runs/my-run` prints it as the post warmup rate, and it works on a run that's still going. The first 50,000 steps run several times faster, because no gradient updates happen yet, so their rate says nothing about the full run.
 - [ ] At that rate, the run finishes when you need it to. Total steps divided by the rate is the run's length in seconds. For Run 2, 6,000,000 at 240.7 steps per second is about 6.9 hours.

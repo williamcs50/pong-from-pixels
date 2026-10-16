@@ -10,10 +10,10 @@ import ale_py
 import cv2
 import gymnasium
 import numpy as np
-import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.device import pick_device
 from src.preprocess import Preprocessor
 from src.replay_buffer import ReplayBuffer
 from src.transform import transform
@@ -21,7 +21,7 @@ from src.transform import transform
 gymnasium.register_envs(ale_py)
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 SEED = 42
 
 # Scaled playfield. The score strip and the bottom wall are as bright as the ball.

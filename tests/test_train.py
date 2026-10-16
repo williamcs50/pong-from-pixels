@@ -8,13 +8,14 @@ import torch.optim as optim
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.device import pick_device
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
 from src.train import train_step
 
 BATCH_SIZE = 4
 N_ACTIONS = 6
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 
 
 def make_batch(seed: int = 0) -> tuple:

@@ -6,11 +6,12 @@ import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.device import pick_device
 from src.preprocess import Preprocessor
 from src.replay_buffer import ReplayBuffer
 from src.transform import transform
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 
 
 def make_fake_frame() -> np.ndarray:

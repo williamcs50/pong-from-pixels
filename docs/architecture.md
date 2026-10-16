@@ -174,7 +174,7 @@ What each file covers:
 
 - **`smoke_test.py`** runs both paths once, end to end. The acting path plays 10 steps of a real game through preprocessing, the transform, the network, and the action selector. The learning path samples a batch of 8 from the buffer and runs it through the transform and the network. Both check shape, dtype, device, and that nothing is NaN. This is the test that catches pieces that work alone but don't fit together.
 - **`test_action_selector.py`** checks that at epsilon 0, 100 picks are all the highest Q value, and at epsilon 1, 6,000 picks land within 25 percent of an even 1,000 per action. It also checks the result is a plain Python int, which caught a real bug: the random branch used to return a numpy int.
-- **`test_q_network.py`** checks the output is one Q value per action on the right device, and that gradients reach every layer. Then the target network: the optimizer doesn't hold it, it stays frozen through a step on the Q network, and it matches the Q network after a sync.
+- **`test_q_network.py`** checks the output is one Q value per action on the right device, and that gradients reach every layer. Then the target network: the optimizer doesn't hold it, it stays frozen through a step on the Q network, and it matches the Q network after a sync. Last, it checks the device order: an NVIDIA GPU first, then an Apple GPU, then the CPU.
 - **`test_preprocess.py`** checks shape, dtype, and value range on a real Pong frame, then the frame stack. The newest frame has to land at the last index, and a reset has to clear the last game's frames, so a stack never mixes two games.
 - **`test_replay_buffer.py`** checks shapes and dtypes after push and sample, the oldest move getting overwritten once it's full, each state staying paired with its own next state, and an error when asked for a bigger batch than it holds.
 - **`test_transform.py`** sends a known frame through the transform and checks every value lands in the right place, not just the shape. Then the round trip: a real frame through preprocessing, the buffer, and the transform has to match transforming it directly.
@@ -193,6 +193,7 @@ What each file covers:
 ```
 src/action_selector.py         Picks the action: random with probability epsilon, otherwise the highest Q value
 src/checkpoint.py              Checkpoints: save and load everything a resume needs
+src/device.py                  Picks where the network runs: an NVIDIA GPU, then an Apple GPU, then the CPU
 src/evaluate.py                Evaluation: the one path every checkpoint is scored through
 src/git_info.py                Run records: commit, clean or not, and software versions
 src/preprocess.py              Turns game screens into 84x84 grayscale, stacked four frames deep

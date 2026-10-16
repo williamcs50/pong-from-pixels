@@ -8,6 +8,7 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.action_selector import select_action
+from src.device import pick_device
 from src.preprocess import Preprocessor
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
@@ -23,7 +24,7 @@ BATCH_SIZE = 8
 # integration this test exists to check.
 EPSILON = 0.0
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 
 
 def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:

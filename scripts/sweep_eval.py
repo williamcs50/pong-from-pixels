@@ -17,8 +17,7 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import torch
-
+from src.device import pick_device
 from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, check_eval_args, evaluate
 from src.git_info import git_state, software_versions
 
@@ -108,7 +107,7 @@ def already_done(out_path: str, *, episodes: int, epsilon: float, seed: int) -> 
 
 if __name__ == "__main__":
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = pick_device()
 
     checkpoint_dir = os.path.join(args.run_dir, "checkpoints")
     out_path = args.out or os.path.join(args.run_dir, "eval.csv")

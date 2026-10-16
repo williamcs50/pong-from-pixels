@@ -18,6 +18,7 @@ import torch.optim as optim
 
 from src.action_selector import select_action
 from src.checkpoint import save_checkpoint
+from src.device import device_name, pick_device
 from src.preprocess import Preprocessor
 from src.probe import load_or_make_probe
 from src.git_info import git_state, software_versions
@@ -143,12 +144,8 @@ def train(
     if os.path.exists(log_path):
         raise FileExistsError(f"{log_path} already exists, use a new output_dir for this run")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    if device.type == "cuda":
-        print(f"Training device: GPU ({torch.cuda.get_device_name(device)})")
-    else:
-        print("Training device: CPU")
+    device = pick_device()
+    print(f"Training device: {device_name(device) or 'CPU'}")
 
     # Seeded before anything draws. np.random covers both select_action and
     # ReplayBuffer.sample. Not bit reproducible on GPU.
@@ -229,7 +226,7 @@ def train(
         "git_dirty": git["git_dirty"],
         # Read back at runtime, not echoed from the arguments.
         "device": str(device),
-        "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
+        "device_name": device_name(device),
         "sticky_actions_readback": actual_sticky,
         "n_actions": int(n_actions),
         **software_versions(),

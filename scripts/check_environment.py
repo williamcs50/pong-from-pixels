@@ -24,6 +24,7 @@ try:
     import torch
 
     from scripts.real_train import REAL_CONFIG
+    from src.device import pick_device
     from src.q_network import QNetwork
     from src.train import train_step
 except ImportError:
@@ -47,11 +48,13 @@ def check_torch() -> None:
     if torch is None:
         print("FAIL  torch not installed (needed for training)")
         return
-    cuda = torch.cuda.is_available()
-    device = "cuda" if cuda else "cpu"
-    print(f"OK  torch {torch.__version__} (device: {device})")
-    if not cuda:
-        print("WARN  CUDA not available, training will be slow on CPU")
+    device = pick_device()
+    print(f"OK  torch {torch.__version__} (device: {device.type})")
+    if device.type == "mps":
+        print("OK  Apple GPU (MPS) found. Training uses it, but the memory checks below are NVIDIA only")
+        return
+    if device.type == "cpu":
+        print("WARN  no GPU found, training will be slow on CPU")
         return
     print(f"OK  GPU: {torch.cuda.get_device_name(0)}")
     x = torch.randn(1000, 1000, device="cuda")
