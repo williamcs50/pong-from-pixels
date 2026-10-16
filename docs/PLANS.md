@@ -31,8 +31,8 @@ Each working day gets an entry in [sessions.md](sessions.md), with a Floor and A
 
 | Dates | Block |
 |---|---|
-| Oct 6 to Oct 8 | **Ready to launch.** Real run config script, reward logging to disk, checkpointing every N steps, the six actions vs three bars decision, the overfit break check, and a launch checklist. Launch the first real run on the PC. |
-| Oct 9 to Oct 10 | **Instrumentation** while the first run trains: Q value drift, epsilon, replay dynamics, wall clock time, VRAM, GPU temperature. |
+| Oct 6 to Oct 8 | **Ready to launch.** Real run config script, reward logging to disk, checkpointing every N steps, the six actions versus three bars decision, the overfit break check, and a launch checklist. Launch the first real run on the PC. |
+| Oct 9 to Oct 10 | **Instrumentation** while the first run trains: Q value drift, epsilon, replay dynamics, wall clock time, VRAM, and GPU temperature. |
 | Oct 12 to Oct 14 | **Diagnose and relaunch.** Check the first run's curve, fix what's wrong, and relaunch with instrumentation in. |
 | Oct 15 to Oct 17 | **Clips.** Find the milestone moments in the reward log and record a clip at each checkpoint. Buildable work done. |
 | Oct 19 to Oct 23 | **Case study.** Write up what worked and what didn't, and put the real curve and clips on the case study. |
