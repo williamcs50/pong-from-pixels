@@ -2,6 +2,8 @@
 
 Pong from Pixels is a Deep Q Network (DQN) project built from scratch that learns to play Atari Pong directly from raw screen pixels on local GPU hardware, documenting the real training curve, including failures, as a reproducible reinforcement learning case study.
 
+It follows the DQN from DeepMind's 2015 Nature paper, [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) [1], first described in [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/abs/1312.5602) [2]. Where the docs compare against "Nature", they mean the 2015 paper.
+
 ## Results
 
 Run 2 trained for 6,000,000 steps on an RTX 2060 in 6.88 hours. A step is one move by the agent, and every 50,000 steps the run saves a checkpoint, a copy of the network as it was at that point. Run 2's best checkpoint, at step 5,400,000, scored +16.97 over 100 evaluation games, so it beats the built in opponent, which means scoring above 0. Run 1 stopped at 2,000,000 steps, and its best checkpoint scored -1.63.
@@ -203,15 +205,67 @@ Run 2's Release also has its original `probe.npy`, the 500 states its Q values w
 
 ## Watch it play
 
-```bash
-# Run 2's best checkpoint, step 5,400,000, the default
-python scripts/watch_checkpoint.py
+`watch_checkpoint.py` opens a game window and plays a checkpoint at real speed, so you can watch the agent you'd otherwise only see as numbers. It plays through the same code that scored the checkpoints, so you see the same games.
 
-# a different checkpoint, by its path, for example step 600,000
-python scripts/watch_checkpoint.py ~/pong-runs/run-02/checkpoints/step_00600000.pt
+**The default is Run 2's best checkpoint,** step 5,400,000:
+
+```bash
+python scripts/watch_checkpoint.py
 ```
 
-Opens a game window with the trained agent playing. With no path, it looks for `~/pong-runs/run-02/checkpoints/step_05400000.pt`, which [Get the checkpoints](#get-the-checkpoints) downloads. On anything other than the RTX 2060 that scored them, like a Mac or a CPU, a game may go slightly differently from the scored one.
+With no path, it plays `~/pong-runs/run-02/checkpoints/step_05400000.pt`, so download that one first (see [Get the checkpoints](#get-the-checkpoints)). It plays one game at seed 0, which on the RTX 2060 is a 21 to 3 win, the same game as the Trained clip. That takes about 2 and a half minutes. When the game ends, the window closes and the score prints:
+
+```
+  episode 1: reward +18 (won 21 to 3), 2386 steps
+```
+
+**To watch any other checkpoint,** pass its path. It can come from Run 2, Run 1, or a run of your own:
+
+```bash
+# Run 2 at step 2,800,000, the first scored checkpoint to beat the opponent
+python scripts/watch_checkpoint.py ~/pong-runs/run-02/checkpoints/step_02800000.pt
+
+# Run 1's best checkpoint, step 1,800,000
+python scripts/watch_checkpoint.py ~/pong-runs/run-01/checkpoints/step_01800000.pt
+```
+
+**To watch a run you trained yourself,** point it at that run's `checkpoints` folder, inside the folder you passed to `--output-dir`. Each file is named `step_` plus the step number padded to 8 digits, so step 600,000 is `step_00600000.pt`. A run saves one at step 0, every 50,000 steps, and at its last step. To see which ones yours has, on Mac or Linux:
+
+```bash
+ls ~/pong-runs/my-run/checkpoints
+```
+
+Or on Windows, in PowerShell:
+
+```powershell
+Get-ChildItem ~/pong-runs/my-run/checkpoints
+```
+
+Then pass the one you want, for example the last one from a 6,000,000 step run:
+
+```bash
+python scripts/watch_checkpoint.py ~/pong-runs/my-run/checkpoints/step_06000000.pt
+```
+
+Swap `my-run` for your run's folder name.
+
+**To change the game,** use these options:
+
+| Option | Default | What it does |
+|---|---|---|
+| `--episodes` | 1 | how many games to play in a row |
+| `--seed` | 0 | which games to play. The same seed always plays the same games. |
+| `--epsilon` | 0.05 | how often the agent makes a random move instead of its own choice. 0.05 is what every score here was measured at. |
+
+For example, Run 2's step 600,000 never returns the ball in its seed 0 game, but its seed 6 game has the rally the First rally clip shows:
+
+```bash
+python scripts/watch_checkpoint.py ~/pong-runs/run-02/checkpoints/step_00600000.pt --seed 6
+```
+
+To stop before the games finish, press Ctrl+C in the terminal.
+
+On anything other than the RTX 2060 that scored these games, like a Mac or a CPU, a game may go slightly differently from the one described here. The agent is the same, so it plays just as well.
 
 ## Evaluate a run
 
@@ -243,3 +297,8 @@ Clips are saved next to the run's checkpoints, in `~/pong-runs/run-02/clips/`, n
 - [docs/architecture.md](docs/architecture.md), every component, its interface, and why it's built rather than imported.
 - [docs/sessions.md](docs/sessions.md), one entry per working day, with the goals set at the start and what landed, what's open, and what was surprising.
 - [docs/launch_checklist.md](docs/launch_checklist.md), a real run from start to finish: the checks before launch, the launch itself in two terminals, and what to check while it runs and when it ends.
+
+## References
+
+1. Mnih, V., Kavukcuoglu, K., Silver, D., et al. "Human-level control through deep reinforcement learning." *Nature* 518, pages 529 to 533 (2015). https://www.nature.com/articles/nature14236
+2. Mnih, V., Kavukcuoglu, K., Silver, D., et al. "Playing Atari with Deep Reinforcement Learning." arXiv:1312.5602 (2013). https://arxiv.org/abs/1312.5602
