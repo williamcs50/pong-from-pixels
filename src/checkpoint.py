@@ -1,3 +1,7 @@
+# src/checkpoint.py
+# Save and load everything a run needs to resume: both networks, the optimizer, the
+# counters, and the random number generators.
+
 import os
 
 import numpy as np

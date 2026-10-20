@@ -1,3 +1,6 @@
+# scripts/check_environment.py
+# Check that Pong, PyTorch, and the GPU work, and measure the memory a real run needs.
+
 import ctypes
 import os
 import sys
@@ -16,11 +19,12 @@ ADAM_MOMENTS = 2  # first and second moment, one float per Q weight each
 # torch is the one guarded import. requirements.txt deliberately leaves it out
 # and tells you to install it manually for your hardware, so "not installed" is
 # a state this script exists to report, not one it should crash on. Everything
-# torch-dependent, QNetwork included, is unavailable in that case.
+# that depends on torch, QNetwork included, is unavailable in that case.
 try:
     import torch
 
     from scripts.real_train import REAL_CONFIG
+    from src.device import pick_device
     from src.q_network import QNetwork
     from src.train import train_step
 except ImportError:
@@ -44,11 +48,13 @@ def check_torch() -> None:
     if torch is None:
         print("FAIL  torch not installed (needed for training)")
         return
-    cuda = torch.cuda.is_available()
-    device = "cuda" if cuda else "cpu"
-    print(f"OK  torch {torch.__version__} (device: {device})")
-    if not cuda:
-        print("WARN  CUDA not available, training will be slow on CPU")
+    device = pick_device()
+    print(f"OK  torch {torch.__version__} (device: {device.type})")
+    if device.type == "mps":
+        print("OK  Apple GPU (MPS) found. Training uses it, but the memory checks below are NVIDIA only")
+        return
+    if device.type == "cpu":
+        print("WARN  no GPU found, training will be slow on CPU")
         return
     print(f"OK  GPU: {torch.cuda.get_device_name(0)}")
     x = torch.randn(1000, 1000, device="cuda")
@@ -79,9 +85,6 @@ def check_vram_baseline() -> None:
     target_network.load_state_dict(q_network.state_dict())
     weights = torch.cuda.memory_allocated() - before_networks
     print(f"OK  both networks resident: {weights / mib:.1f} MiB")
-    if before_networks:
-        print(f"NOTE  {before_networks / mib:.1f} MiB was already allocated before the networks, "
-              f"the cuBLAS workspace from check_torch's matrix multiply")
 
     # Optimizer state is allocated lazily, so it only appears once a real step runs.
     optimizer = torch.optim.Adam(q_network.parameters(), lr=REAL_CONFIG["learning_rate"])
@@ -102,8 +105,6 @@ def check_vram_baseline() -> None:
     train_step(q_network, target_network, optimizer, batch, REAL_CONFIG["gamma"])
     print(f"OK  training step at batch {batch_size}: {(steady - before_networks) / mib:.1f} MiB resident, "
           f"peak {(torch.cuda.max_memory_allocated() - steady) / mib:.1f} MiB above it")
-    # Confirmed by setting CUBLAS_WORKSPACE_CONFIG, which resized this block and the one above.
-    print("NOTE  resident includes a second cuBLAS workspace, created for the backward pass's own thread")
     print("NOTE  these count this process's tensors only. nvidia-smi and gpu_log.csv report the whole "
           "card, including the CUDA context and other programs")
 
@@ -150,8 +151,6 @@ def check_buffer_ram(capacity: int = 100_000) -> None:
     per_transition = sum(field.nbytes for field in fields) // sample_size
     total_gib = per_transition * capacity / 1024 ** 3
     print(f"OK  replay buffer at capacity {capacity:,}: {total_gib:.2f} GiB host RAM ({per_transition:,} bytes/transition)")
-    # np.zeros reserves all of it in __init__, so it fits at startup or not at all.
-    print("NOTE  buffer RAM is allocated eagerly at construction, and state/next_state store every frame twice")
 
 
 if __name__ == "__main__":

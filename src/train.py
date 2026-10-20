@@ -1,3 +1,7 @@
+# src/train.py
+# The training loop that scripts/tiny_train.py and scripts/real_train.py both call,
+# with its logs, checkpoints, and instrumentation.
+
 import csv
 import datetime
 import json
@@ -14,6 +18,7 @@ import torch.optim as optim
 
 from src.action_selector import select_action
 from src.checkpoint import save_checkpoint
+from src.device import device_name, pick_device
 from src.preprocess import Preprocessor
 from src.probe import load_or_make_probe
 from src.git_info import git_state, software_versions
@@ -58,7 +63,7 @@ def train_step(q_network: QNetwork, target_network: QNetwork, optimizer: optim.O
 
 def probe_metrics(q_network: QNetwork, probe_tensor: torch.Tensor) -> dict:
     # Levels, not deltas. Drift against step 0, the previous row, or another run is
-    # all derivable afterwards, and computing one of them here picks the baseline
+    # all derivable afterward, and computing one of them here picks the baseline
     # for every later reader.
     with torch.no_grad():
         q_values = q_network(probe_tensor)
@@ -139,12 +144,8 @@ def train(
     if os.path.exists(log_path):
         raise FileExistsError(f"{log_path} already exists, use a new output_dir for this run")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    if device.type == "cuda":
-        print(f"Training device: GPU ({torch.cuda.get_device_name(device)})")
-    else:
-        print("Training device: CPU")
+    device = pick_device()
+    print(f"Training device: {device_name(device) or 'CPU'}")
 
     # Seeded before anything draws. np.random covers both select_action and
     # ReplayBuffer.sample. Not bit reproducible on GPU.
@@ -225,7 +226,7 @@ def train(
         "git_dirty": git["git_dirty"],
         # Read back at runtime, not echoed from the arguments.
         "device": str(device),
-        "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
+        "device_name": device_name(device),
         "sticky_actions_readback": actual_sticky,
         "n_actions": int(n_actions),
         **software_versions(),

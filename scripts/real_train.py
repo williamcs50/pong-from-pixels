@@ -1,11 +1,12 @@
 # scripts/real_train.py
-# Run 1 on the 2060, through the same train() as scripts/tiny_train.py.
+# The real runs on the 2060, through the same train() as scripts/tiny_train.py.
 # The reasoning behind each value is in the 2026-10-06 entry of docs/sessions.md.
 #
-# The warmup pass before Run 1 is this same script with a shorter step count, so
-# the rate it measures comes from the code path Run 1 actually uses:
-#   python scripts/real_train.py --total-steps 70000     warmup pass
-#   python scripts/real_train.py                         Run 1
+# The warmup pass before each run is this same script with a shorter step count, so
+# the rate it measures comes from the code path the run actually uses:
+#   python scripts/real_train.py --total-steps 120000     warmup pass
+#   python scripts/real_train.py                          Run 1
+#   python scripts/real_train.py --total-steps 6000000    Run 2
 
 import argparse
 import os
@@ -30,8 +31,8 @@ REAL_CONFIG = {
     "gamma": 0.99,
     "repeat_action_probability": 0.0,  # v5 defaults this to 0.25
     "seed": 0,  # not bit reproducible on GPU, cuDNN picks nondeterministic kernels
-    "checkpoint_every_steps": 50_000,  # 40 checkpoints at 27 MB, about 1.1 GB
-    "metrics_every_steps": 10_000,  # 600 rows over a 6M step run
+    "checkpoint_every_steps": 50_000,  # 27 MB each, about 1.1 GB for Run 1 and 3.26 GB for Run 2
+    "metrics_every_steps": 10_000,  # 601 rows over Run 2's 6M steps, counting step 0
     "probe_path": None,  # generated from PROBE_SEED and saved into the run directory
 }
 
@@ -46,6 +47,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
+        type=os.path.expanduser,
         default=None,
         help=f"defaults to the next run-NN under {RUNS_ROOT}",
     )
@@ -57,6 +59,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--probe",
+        type=os.path.expanduser,
         default=REAL_CONFIG["probe_path"],
         help="reuse an earlier run's probe.npy, so Q figures are measured on byte "
              "identical states. Defaults to generating one from PROBE_SEED.",

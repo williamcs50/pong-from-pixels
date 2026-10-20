@@ -10,10 +10,10 @@ import ale_py
 import cv2
 import gymnasium
 import numpy as np
-import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.device import pick_device
 from src.preprocess import Preprocessor
 from src.replay_buffer import ReplayBuffer
 from src.transform import transform
@@ -21,7 +21,7 @@ from src.transform import transform
 gymnasium.register_envs(ale_py)
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 SEED = 42
 
 # Scaled playfield. The score strip and the bottom wall are as bright as the ball.
@@ -78,9 +78,9 @@ np.random.seed(SEED)
 obs, _ = env.reset(seed=SEED)
 env.action_space.seed(SEED)
 
-# Step forward so the ball is in play
+# Step forward so the ball is in play.
 for _ in range(60):
-    obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+    obs, _, terminated, truncated, _ = env.step(env.action_space.sample())
     if terminated or truncated:
         obs, _ = env.reset()
 
@@ -108,7 +108,7 @@ motion_stack = None
 motion_stack_step = None
 for step in range(BUILD_STEPS):
     action = env.action_space.sample()
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, _ = env.step(action)
     episode_over = terminated or truncated
     if episode_over:
         # env.reset() and prep.reset() always together, or slots span two episodes.

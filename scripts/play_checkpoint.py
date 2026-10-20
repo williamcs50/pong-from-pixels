@@ -8,24 +8,25 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import torch
-
-from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, evaluate
+from src.device import pick_device
+from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, check_eval_args, evaluate
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Play episodes from a saved checkpoint.")
-    parser.add_argument("checkpoint", help="path to a step_NNNNNNNN.pt file")
+    parser.add_argument("checkpoint", type=os.path.expanduser, help="path to a step_NNNNNNNN.pt file")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--repeat-action-probability", type=float, default=0.0)
-    return parser.parse_args()
+    args = parser.parse_args()
+    check_eval_args(parser, args)
+    return args
 
 
 if __name__ == "__main__":
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = pick_device()
 
     print(f"Device: {device}")
     print(f"Checkpoint: {args.checkpoint}")

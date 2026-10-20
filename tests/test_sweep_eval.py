@@ -31,7 +31,8 @@ def write_checkpoint(directory: str, name_step: int, held_step: int | None = Non
 
 def run_sweep(run_dir: str, *extra: str) -> subprocess.CompletedProcess:
     """Run sweep_eval.py at one episode per checkpoint and return the finished process."""
-    # CPU, so the test neither needs a GPU nor competes with a sweep already on one.
+    # Off the NVIDIA GPU, so the test can't compete with a sweep already on it. On an
+    # Apple Silicon Mac it still runs on the Mac's own GPU, which nothing else is using.
     # "-1" rather than "": an empty value leaves torch reporting CUDA with no device.
     env = {**os.environ, "CUDA_VISIBLE_DEVICES": "-1"}
     return subprocess.run([sys.executable, SCRIPT, run_dir, "--episodes", "1", *extra],
@@ -55,26 +56,49 @@ def test_checkpoint_selection() -> None:
     print("PASS  --every keeps multiples only, and skips temp files and other names")
 
 
+SETTINGS = {"episodes": 100, "epsilon": 0.05, "seed": 0}
+
+
+def write_rows(path: str, rows: list[tuple[int, int, float, int]]) -> None:
+    """Write a sweep CSV whose rows hold these env_step, episodes, epsilon and seed values."""
+    with open(path, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(sweep_eval.COLUMNS)
+        for row in rows:
+            writer.writerow(list(row) + [""] * (len(sweep_eval.COLUMNS) - len(row)))
+
+
+def refuses(path: str, **settings: float) -> bool:
+    """Return whether already_done refuses the file at path for these settings."""
+    try:
+        sweep_eval.already_done(path, **settings)
+    except ValueError:
+        return True
+    return False
+
+
 def test_already_done_refuses_old_columns() -> None:
     with tempfile.TemporaryDirectory() as directory:
         current = os.path.join(directory, "current.csv")
-        with open(current, "w", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(sweep_eval.COLUMNS)
-            writer.writerow([0] + [""] * (len(sweep_eval.COLUMNS) - 1))
-            writer.writerow([200_000] + [""] * (len(sweep_eval.COLUMNS) - 1))
-        assert sweep_eval.already_done(current) == {0, 200_000}, "already_done missed rows"
-        assert sweep_eval.already_done(os.path.join(directory, "missing.csv")) == set()
+        write_rows(current, [(0, 100, 0.05, 0), (200_000, 100, 0.05, 0)])
+        assert sweep_eval.already_done(current, **SETTINGS) == {0, 200_000}, "already_done missed rows"
+        assert sweep_eval.already_done(os.path.join(directory, "missing.csv"), **SETTINGS) == set()
 
         old = os.path.join(directory, "old.csv")
         with open(old, "w", newline="") as handle:
             csv.writer(handle).writerow(sweep_eval.COLUMNS[:-2] + ["elapsed_s"])
-        try:
-            sweep_eval.already_done(old)
-        except ValueError:
-            print("PASS  already_done reads finished steps and refuses a file with other columns")
-            return
-    raise AssertionError("already_done accepted a file with different columns")
+        assert refuses(old, **SETTINGS), "already_done accepted a file with different columns"
+    print("PASS  already_done reads finished steps and refuses a file with other columns")
+
+
+def test_already_done_refuses_other_settings() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "eval.csv")
+        write_rows(path, [(0, 100, 0.05, 0), (200_000, 100, 0.05, 0)])
+        for name, value in (("seed", 1), ("epsilon", 0.1), ("episodes", 10)):
+            assert refuses(path, **{**SETTINGS, name: value}), f"a different {name} counted as done"
+        assert not refuses(path, **SETTINGS), "matching settings were refused"
+    print("PASS  rows scored with another seed, epsilon or episode count are refused, not skipped")
 
 
 def test_record_invocation_appends() -> None:
@@ -99,7 +123,8 @@ def test_sweep_end_to_end() -> None:
 
         first = run_sweep(run_dir, "--every", "50000", "--through", "50000")
         assert first.returncode == 0, first.stderr
-        assert "Device: cpu" in first.stdout, f"sweep did not run on CPU:\n{first.stdout}"
+        assert "Device: cpu" in first.stdout or "Device: mps" in first.stdout, (
+            f"sweep did not stay off the NVIDIA GPU:\n{first.stdout}")
         rows = read_rows(out)
         assert [int(r["env_step"]) for r in rows] == [0, 50_000], f"--through gave {rows}"
         assert list(rows[0]) == sweep_eval.COLUMNS, f"columns {list(rows[0])}"
@@ -111,7 +136,7 @@ def test_sweep_end_to_end() -> None:
         assert [int(r["env_step"]) for r in rows] == [0, 50_000, 100_000], f"resume gave {rows}"
         assert "to do: 1" in second.stdout, f"resume should have had one to do:\n{second.stdout}"
         assert len(json.load(open(os.path.join(run_dir, "eval_config.json")))) == 2, "history not appended"
-    print("PASS  sweep honours --through, writes every column, and resumes without redoing rows")
+    print("PASS  sweep honors --through, writes every column, and resumes without redoing rows")
 
 
 def test_sweep_rejects_mislabeled_checkpoint() -> None:
@@ -127,10 +152,29 @@ def test_sweep_rejects_mislabeled_checkpoint() -> None:
     print("PASS  a checkpoint whose counter disagrees with its name stops the sweep")
 
 
+def test_sweep_refuses_what_it_would_skip() -> None:
+    with tempfile.TemporaryDirectory() as run_dir:
+        checkpoints = os.path.join(run_dir, "checkpoints")
+        os.makedirs(checkpoints)
+        write_checkpoint(checkpoints, 50_000)
+        no_match = run_sweep(run_dir, "--every", "200000")
+        other_seed = os.path.join(run_dir, "eval.csv")
+        write_rows(other_seed, [(50_000, 1, 0.05, 0)])
+        mixed = run_sweep(run_dir, "--every", "50000", "--seed", "1")
+        bad_epsilon = run_sweep(run_dir, "--every", "50000", "--epsilon", "5")
+
+    assert no_match.returncode != 0 and "no checkpoint" in no_match.stderr, no_match.stdout
+    assert mixed.returncode != 0 and "Point --out somewhere else" in mixed.stderr, mixed.stdout
+    assert bad_epsilon.returncode != 0 and "--epsilon" in bad_epsilon.stderr, bad_epsilon.stdout
+    print("PASS  the sweep stops on no matching checkpoint, rows of another seed, and a bad epsilon")
+
+
 if __name__ == "__main__":
     test_checkpoint_selection()
     test_already_done_refuses_old_columns()
+    test_already_done_refuses_other_settings()
     test_record_invocation_appends()
     test_sweep_end_to_end()
     test_sweep_rejects_mislabeled_checkpoint()
+    test_sweep_refuses_what_it_would_skip()
     print("\nAll tests passed!")

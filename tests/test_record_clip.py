@@ -1,18 +1,19 @@
 import importlib.util
 import os
+import subprocess
 import sys
 import tempfile
 
 import numpy as np
-import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.evaluate import evaluate
 from tests.test_evaluate import SETTINGS, write_step_0_checkpoint
 
-spec = importlib.util.spec_from_file_location(
-    "record_clip", os.path.join(os.path.dirname(__file__), "..", "scripts", "record_clip.py"))
+SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "record_clip.py")
+
+spec = importlib.util.spec_from_file_location("record_clip", SCRIPT)
 record_clip = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(record_clip)
 
@@ -65,9 +66,37 @@ def test_untrained_network_never_returns() -> None:
     print(f"PASS  the untrained network returns nothing, with the ball found in {seen} frames")
 
 
+def record(*args: str) -> subprocess.CompletedProcess:
+    """Run record_clip.py with these arguments and return the finished process."""
+    return subprocess.run([sys.executable, SCRIPT, *args], capture_output=True, text=True)
+
+
+def test_bad_flags_stop_before_playing() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "step_00000000.pt")
+        write_step_0_checkpoint(path)
+        out = os.path.join(directory, "clip.mp4")
+        cases = {
+            "--out must end in .mp4": ("--out", os.path.join(directory, "clip")),
+            "--epsilon": ("--out", out, "--epsilon", "1.5"),
+            "--seed": ("--out", out, "--seed", "-1"),
+        }
+        results = {message: record(path, *flags) for message, flags in cases.items()}
+        open(out, "w").close()
+        existing = record(path, "--out", out)
+        left = os.listdir(directory)
+
+    for message, result in results.items():
+        assert result.returncode != 0 and message in result.stderr, f"{message}: {result.stderr}"
+    assert existing.returncode != 0 and "--overwrite" in existing.stderr, existing.stderr
+    assert sorted(left) == ["clip.mp4", "step_00000000.pt"], f"files left behind: {left}"
+    print("PASS  a bad --out, --epsilon or --seed, or an existing clip, stops before anything is written")
+
+
 if __name__ == "__main__":
     test_return_turning_at_the_paddle()
     test_no_return_when_the_ball_passes_or_turns_elsewhere()
     test_rally_start_needs_three_returns_in_one_window()
     test_untrained_network_never_returns()
+    test_bad_flags_stop_before_playing()
     print("\nAll tests passed!")

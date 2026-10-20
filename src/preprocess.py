@@ -1,3 +1,7 @@
+# src/preprocess.py
+# Turn raw Atari frames into the network's input: 84 by 84 grayscale, the last four
+# frames stacked so the network can see motion.
+
 from collections import deque
 
 import cv2
@@ -11,7 +15,6 @@ class Preprocessor:
         self.frame_stack = deque(maxlen=stack_size)
 
     def preprocess(self, obs: np.ndarray) -> np.ndarray:
-        # Raw RGB observation to uint8 (84, 84) grayscale frame.
         if len(obs.shape) == 3:
             gray = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
         else:

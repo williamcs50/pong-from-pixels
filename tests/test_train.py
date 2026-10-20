@@ -8,13 +8,14 @@ import torch.optim as optim
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.device import pick_device
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
 from src.train import train_step
 
 BATCH_SIZE = 4
 N_ACTIONS = 6
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 
 
 def make_batch(seed: int = 0) -> tuple:
@@ -169,7 +170,7 @@ def test_train_step_overfits_fixed_batch() -> None:
 
     initial_loss = train_step(q_network, target_network, optimizer, batch, gamma=0.99)
 
-    # 200 calls total, counting the first and the last
+    # 200 calls total, counting the first and the last.
     for _ in range(198):
         train_step(q_network, target_network, optimizer, batch, gamma=0.99)
 

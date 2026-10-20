@@ -1,3 +1,7 @@
+# src/git_info.py
+# The commit, whether the working tree was clean, and the software versions, recorded
+# with every run, sweep, and clip.
+
 import os
 import platform
 import subprocess
@@ -6,8 +10,8 @@ from importlib import metadata
 
 import torch
 
-# The packages whose behaviour reaches a run's numbers. Read from what is installed,
-# since requirements.txt pins nothing.
+# The packages whose behavior reaches a run's numbers. Read from what is installed,
+# since requirements.txt only pins OpenCV and numpy.
 PACKAGES = ("gymnasium", "ale-py", "numpy", "opencv-python-headless", "imageio-ffmpeg")
 
 
@@ -15,7 +19,7 @@ def git_state() -> dict:
     # A hash recorded while files were modified does not describe the code that ran,
     # so the status comes back with it. Untracked files count: src/checkpoint.py was
     # untracked and imported by train.py, so a new unignored file can change
-    # behaviour. commit None means git was unusable, which is unverifiable rather
+    # behavior. commit None means git was unusable, which is unverifiable rather
     # than clean.
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

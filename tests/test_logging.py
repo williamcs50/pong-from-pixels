@@ -1,6 +1,7 @@
 import atexit
 import csv
 import functools
+import importlib.util
 import json
 import math
 import os
@@ -193,6 +194,21 @@ def test_refuses_dirty_tree() -> None:
     raise AssertionError("train() ran on a dirty tree without allow_dirty")
 
 
+def test_output_dir_expands_tilde() -> None:
+    # PowerShell passes ~ through unexpanded, which would put the run in a folder named ~.
+    spec = importlib.util.spec_from_file_location(
+        "real_train", os.path.join(os.path.dirname(__file__), "..", "scripts", "real_train.py"))
+    real_train = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(real_train)
+    with mock.patch.object(sys, "argv", ["real_train.py", "--output-dir", "~/pong-runs/my-run"]):
+        output_dir = real_train.parse_args().output_dir
+
+    assert not output_dir.startswith("~"), f"--output-dir kept the ~: {output_dir}"
+    expected = os.path.join(os.path.expanduser("~"), "pong-runs", "my-run")
+    assert os.path.normpath(output_dir) == os.path.normpath(expected), f"{output_dir} is not {expected}"
+    print("PASS  real_train.py expands ~ in --output-dir, so the run lands in the home folder")
+
+
 if __name__ == "__main__":
     test_metrics_rows_on_schedule()
     test_metrics_before_updates_are_identical()
@@ -203,4 +219,5 @@ if __name__ == "__main__":
     test_run_config_records_the_probe()
     test_refuses_existing_run()
     test_refuses_dirty_tree()
+    test_output_dir_expands_tilde()
     print("\nAll tests passed!")

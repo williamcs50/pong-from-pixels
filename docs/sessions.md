@@ -10,12 +10,12 @@
 
 ## What landed today
 
-- Pong renders on the screen with the random agent.
-- The repo is live.
+- Pong now renders on screen with the random agent.
+- I put the repo live with its first commit.
 
 ## Anything surprising or worth flagging
 
-- Coming into this project, I had no prior experience with the Gymnasium library. Getting familiar with its environment API was the first real hurdle of the day.
+- I'd never used Gymnasium before this project, so learning its environment API was the first real hurdle.
 
 ---
 
@@ -31,12 +31,12 @@
 
 ## What landed today
 
-- The GPU is verified and working. `check_environment.py` runs a tensor on CUDA and a small matmul, confirming the 2060 is live and that PyTorch is using it.
-- The architecture is documented in `docs/architecture.md`, with every component named, its interface defined, and a build or import call defended with a reason.
+- I verified the GPU works. `check_environment.py` puts a tensor on CUDA and runs a small matmul, which confirms the 2060 is live and PyTorch is using it.
+- I documented the architecture in `docs/architecture.md`. Every component is named, with its interface and my reason for building it or importing it.
 
 ## Anything surprising or worth flagging
 
-- I did not realize that pip install torch only installs a CPU only build by default. There is no warning, and the GPU never gets used even if the hardware is ready. PyTorch has to be installed from its own index to get the CUDA build.
+- I didn't know `pip install torch` gives you a CPU only build by default. There's no warning, and the GPU never gets used even when the hardware is ready. You have to install PyTorch from its own index to get the CUDA build.
 
 ---
 
@@ -52,18 +52,18 @@
 
 ## What landed today
 
-- `src/preprocess.py` written and committed. Grayscale conversion, resize to 84 x 84, and frame stacking across a sliding window of 4 frames.
-- `tests/test_preprocess.py` passes all tests against a real Pong frame. Shape, dtype, and value range verified. Visual inspection of a saved frame still pending.
+- I wrote and committed `src/preprocess.py`: grayscale, a resize to 84 x 84, and a sliding stack of the last 4 frames.
+- `tests/test_preprocess.py` passes against a real Pong frame, checking shape, dtype, and value range. I still haven't looked at a saved frame myself.
 
 ## What's open (carrying forward)
 
-- Replay buffer will be deferred to next session.
-- Before next session: save a preprocessed frame as a PNG with `cv2.imwrite` and confirm the ball is visible. This is the one verification the test suite cannot do.
-- The preprocessor outputs HWC format (84, 84, 4). The NCHW transpose needed by the network will be handled in the agent, not here.
+- The replay buffer moves to next session.
+- Before next session, I need to save a preprocessed frame as a PNG with `cv2.imwrite` and check the ball is visible. It's the one thing the tests can't check.
+- The preprocessor outputs HWC, (84, 84, 4). The network needs NCHW, and I'll do that transpose in the agent, not here.
 
 ## Anything surprising or worth flagging
 
-- Coming into this session, I had no prior experience with OpenCV. Getting familiar with the grayscale conversion and resize API was the first real step before writing `src/preprocess.py`.
+- I'd never used OpenCV before, so I spent the start of the session learning its grayscale and resize functions before writing `src/preprocess.py`.
 
 ---
 
@@ -79,16 +79,16 @@
 
 ## What landed today
 
-- `src/replay_buffer.py` was written and committed.
-- `tests/test_replay_buffer.py` passes all tests: shapes and dtypes, circular overwrite, state and next_state pairing, and error handling when `batch_size` exceeds the number of stored transitions.
+- I wrote and committed `src/replay_buffer.py`.
+- `tests/test_replay_buffer.py` passes. It covers shapes and dtypes, circular overwrite, state and next_state pairing, and the error when `batch_size` is bigger than the number of stored transitions.
 
 ## What's open (carrying forward)
 
-- Floor was met. Aspiration not reached. Q network and target network deferred to next session.
+- I met the floor but not the aspiration. The Q network and target network move to next session.
 
 ## Anything surprising or worth flagging
 
-- I assumed the replay buffer capacity would match the original DQN paper at 1 million transitions. Working through the actual memory budget brought it down. Each state is 84 x 84 x 4 = 28,224 bytes as uint8. Storing both state and next_state per transition doubles that to 56,448 bytes. With 16 GB RAM minus roughly 5 GB for OS, PyTorch, and the CUDA context, about 11 GB is available. That buys around 195,000 transitions. 100,000 was chosen as a conservative starting point.
+- I assumed the buffer would hold 1 million transitions like the original DQN paper. The memory math brought that down. Each state is 84 x 84 x 4 = 28,224 bytes as uint8, and storing state and next_state doubles it to 56,448 bytes per transition. With 16 GB of RAM and roughly 5 GB going to the OS, PyTorch, and the CUDA context, I have about 11 GB, which is around 195,000 transitions. I went with 100,000 to be safe.
 
 ---
 
@@ -104,16 +104,16 @@
 
 ## What landed today
 
-- The Q network was designed, built, and tested. Its shape, device placement, gradients, and output sanity were all confirmed. The transform site, activation placement, and dynamic action count handling were all deliberate choices, and each one is easy to defend.
+- I designed, built, and tested the Q network. The tests check its output shape, that it runs on the GPU, that gradients flow, and that its output looks sane. Where the transform happens, where the activations go, and how the action count gets passed in were all choices I made on purpose.
 
 ## What's open (carrying forward)
 
-- The target network and action selector are still open. Both are small implementation steps, and the target network is basically a second QNetwork instance plus a simple weight copy routine.
+- The target network and the action selector are still open. Both are small. The target network is basically a second QNetwork plus a function that copies the weights over.
 
 ## Anything surprising or worth flagging
 
-- The main surprise was how little code was needed to verify the Q network end to end once the architecture and tests were in place.
-- I did not fully account for the target network until the end, so I deferred it to the next session.
+- Verifying the Q network end to end took a lot less code than I expected, once the architecture and tests were in place.
+- I didn't think about the target network until the end of the session, so it moves to next session.
 
 ---
 
@@ -129,17 +129,17 @@
 
 ## What landed today
 
-- The target network was designed, built, and tested. Its isolation from the optimizer, its frozen weights through a gradient step on the online network, and its equality with the online network after a sync were all confirmed. Hard copy sync via `load_state_dict` was chosen over Polyak averaging. It matches the original Atari DQN paper, and it's simpler to test: a discrete frozen then synced event instead of a continuous per step drift.
+- I designed, built, and tested the target network. The tests confirm the optimizer never touches it, its weights stay frozen through a gradient step on the online network, and it matches the online network after a sync. I sync with a hard copy through `load_state_dict` instead of Polyak averaging. That's what the original Atari DQN paper did, and it's easier to test, since a sync is one event instead of a small drift every step.
 
 ## What's open (carrying forward)
 
 - The action selector is still open. It gets its own file, `src/action_selector.py`, and its own test. Q values and epsilon in, an integer action out. Epsilon = 1 should behave like uniform random selection, epsilon = 0 like deterministic argmax, and the forward pass through the network should run under `no_grad`.
-- The shared transform function is still open: one function, called by both the training path and the action selection path, that reconciles the preprocessor's normalized `(4, 84, 84)` float32 output with the replay buffer's raw `(84, 84, 4)` uint8 storage and converts it into what the network expects. This doesn't exist on either path yet, it isn't a matter of deduping a copy that's already there.
+- The shared transform function is still open: one function, called by both the training path and the action selection path, that reconciles the preprocessor's normalized `(4, 84, 84)` float32 output with the replay buffer's raw `(84, 84, 4)` uint8 storage and converts it into what the network expects. This doesn't exist on either path yet, so it isn't a matter of deduping a copy that's already there.
 - The integration smoke test is still open: `env.reset()` through the preprocessor, the shared transform, and the network, out to an action, back through `env.step()`, into the replay buffer, then a sampled batch through the same transform and network again.
 
 ## Anything surprising or worth flagging
 
-- It had been two weeks since I'd last looked at this code, so getting back up to speed on `q_network.py` took longer than expected. Building the target network and its tests ended up taking more time than planned as a result.
+- I hadn't looked at this code in two weeks, so getting back into `q_network.py` took longer than I expected, and the target network and its tests ran over because of it.
 
 ---
 
@@ -156,7 +156,7 @@
 ## What landed today
 
 - `src/action_selector.py` is built. It takes Q values, epsilon, and the number of actions, and returns a plain Python int, either the argmax action or a random one. I kept it separate from the network on purpose, so whatever calls the network still owns the `no_grad` context, not the selector.
-- `tests/test_action_selector.py` passes everything I wanted covered. Epsilon 0 always picks the same argmax action, epsilon 1 explores every action roughly evenly, the return type is a real Python int on both branches, and the action always falls inside the valid range. I caught a real bug while writing these tests, the random branch was returning a numpy int instead of a plain Python int.
+- `tests/test_action_selector.py` passes everything I wanted covered. Epsilon 0 always picks the same argmax action, epsilon 1 explores every action roughly evenly, the return type is a real Python int on both branches, and the action always falls inside the valid range. I caught a real bug while writing these tests: the random branch was returning a numpy int instead of a plain Python int.
 - While tracing this, I noticed `architecture.md` had the preprocessor's output and the network's input written down wrong. It described them as 84 x 84 x 4 in uint8, which is actually the replay buffer's storage shape, not what the preprocessor or network use. The real shape is 4 x 84 x 84 in float32. I fixed `architecture.md`.
 
 ## What's open (carrying forward)
@@ -182,15 +182,15 @@
 
 ## What landed today
 
-- No code was committed today. The session went entirely to verification and design, and it earned its keep anyway.
-- The buffer's storage dtype was decided on evidence, not habit. Two state sized arrays at capacity 100,000 cost 5.6448 GB under uint8 versus 22.5792 GB under float32, checked against 31.86 GB of system RAM. Float32 technically fits, but it buys nothing, since the emulator only ever produces uint8 pixels in the first place.
-- Traced the transform's round trip and found it wasn't actually invertible. `astype(np.uint8)` truncates instead of rounding, so a value that isn't an exact multiple of 1 over 255 comes back slightly wrong after the round trip, silently, with no error thrown.
-- Rounding before the cast would have shrunk that error, not removed it. The real fix was noticing that two conversions in the pipeline exist only to undo each other, the preprocessor dividing by 255 and the transform multiplying it back. Deleting both instead of patching the cast removes the bug entirely rather than making it smaller.
-- The resulting design is written down precisely enough to build from directly: the preprocessor stops after resize and returns uint8 with no normalization, the buffer takes it raw with no conversion in `push`, and one shared transform sits on the read side, used identically by the training path and the action selection path.
+- I didn't commit any code today. The whole session went to checking and design, and it was still worth it.
+- I picked the buffer's storage dtype by measuring, not by habit. Two state sized arrays at capacity 100,000 cost 5.6448 GB under uint8 versus 22.5792 GB under float32, checked against 31.86 GB of system RAM. Float32 technically fits, but it buys nothing, since the emulator only ever produces uint8 pixels in the first place.
+- I traced the transform's round trip and found it wasn't actually invertible. `astype(np.uint8)` truncates instead of rounding, so a value that isn't an exact multiple of 1 over 255 comes back slightly wrong after the round trip, silently, with no error thrown.
+- Rounding before the cast would have shrunk that error, not removed it. The real fix was noticing that two conversions in the pipeline exist only to undo each other, the preprocessor dividing by 255 and the transform multiplying it back. Deleting both gets rid of the bug instead of just making it smaller.
+- I wrote the new design down in enough detail to build straight from it: the preprocessor stops after resize and returns uint8 with no normalization, the buffer takes it raw with no conversion in `push`, and one shared transform sits on the read side, used identically by the training path and the action selection path.
 
 ## What's open (carrying forward)
 
-- Floor was not met. Nothing was written today, only verified and designed.
+- I didn't meet the floor. Nothing was written today, only checked and designed.
 - The preprocessor change itself: stop normalizing, return uint8, and stack the frames on the last axis instead of the first.
 - The three preprocessor tests, updated to match the new dtype and shape.
 - `architecture.md`, corrected again to reflect the new design.
@@ -200,8 +200,8 @@
 
 ## Anything surprising or worth flagging
 
-- Caught the `push` problem last week by reading the code instead of trusting that a conversion existed. Today's entire session was downstream of that one habit.
-- Three and three quarter hours went to verification and design, zero to code. Not a failure on its own, but a pacing data point worth sitting with honestly: whether the diagnostics ran long because they needed to, or because running one more check felt safer than committing to a claim on the page.
+- I caught the `push` problem last week by reading the code instead of assuming a conversion existed, and everything today came out of that.
+- I spent three and three quarter hours on checking and design, and none on code. That's not a failure by itself, but I want to be honest about why. Did the checks run long because they needed to, or because one more check felt safer than writing something down?
 
 ---
 
@@ -218,10 +218,10 @@
 ## What landed today
 
 - `src/preprocess.py` no longer normalizes. `preprocess()` returns the resized uint8 frame as is, and `_get_stacked()` stacks on the last axis instead of the first, so `reset()`/`step()` return `(84, 84, 4)` uint8, matching the replay buffer's storage exactly.
-- Six of seven `test_preprocess.py` tests updated for the new dtype, shape, and axis. All seven pass against a real Pong frame.
-- `src/transform.py` built: one function, uint8 HWC in, single frame or batch, normalized float32 NCHW out on a given device. Handles the missing batch axis on a single frame internally, so neither caller has to know which shape it started with.
-- `tests/test_transform.py` built: an isolated value test against hand computed expected output, and a round trip test, a frame through `Preprocessor`, through `ReplayBuffer.push`/`sample`, through the transform, checked against transforming the original directly. Both pass.
-- `architecture.md` corrected: the diagram now shows `Transform` in both the collection and training paths, Preprocessing's output and the network's input are back to matching the actual code.
+- I updated six of the seven `test_preprocess.py` tests for the new dtype, shape, and axis. All seven pass against a real Pong frame.
+- I built `src/transform.py`: one function, uint8 HWC in, single frame or batch, normalized float32 NCHW out on a given device. Handles the missing batch axis on a single frame internally, so neither caller has to know which shape it started with.
+- I built `tests/test_transform.py`: an isolated value test against hand computed expected output, and a round trip test, a frame through `Preprocessor`, through `ReplayBuffer.push`/`sample`, through the transform, checked against transforming the original directly. Both pass.
+- I corrected `architecture.md`. The diagram now shows `Transform` in both the collection and training paths, and Preprocessing's output and the network's input match the actual code again.
 
 ## What's open (carrying forward)
 
@@ -245,24 +245,24 @@
 
 ## What landed today
 
-- `scripts/visual_check.py` corrected: no more `*255` overflow, `transform_output.png` now compares against the same frame as `preprocessed_frame.png` instead of a later, mutated one, episode boundaries pair `env.reset()` with `prep.reset()` instead of stepping across them, and the ball candidate printout is cropped to the field so it's not buried under the score strip and the bottom wall. It used to call `preprocess()` directly, so it structurally could not see last week's stacking axis change. Now it runs through the buffer, sample, and the shared transform, the same path training will actually use. Reran it just now, still clean.
-- `tests/test_preprocess.py` now has two real assertions instead of eyeball checks: `test_newest_frame_at_last_index` and `test_reset_clears_stale_stack`. Frame ordering was confirmed independently too, by differencing frames and tracking the ball's raw coordinates, scaled by 84 over 160 to match the preprocessed frame.
-- `tests/smoke_test.py` built: two paths, acting (`env.reset()` through the preprocessor, the transform, the network, `select_action`, `env.step()`) and learning (a batch sampled from the buffer through the transform and the network), both asserting shape, dtype, device, and no NaN on the network output. Ten steps and a batch of eight ran clean.
+- I corrected `scripts/visual_check.py`: no more `*255` overflow, `transform_output.png` now compares against the same frame as `preprocessed_frame.png` instead of a later, mutated one, episode boundaries pair `env.reset()` with `prep.reset()` instead of stepping across them, and the ball candidate printout is cropped to the field so it's not buried under the score strip and the bottom wall. It used to call `preprocess()` directly, so it structurally could not see last week's stacking axis change. Now it runs through the buffer, sample, and the shared transform, the same path training will actually use. I reran it and it's still clean.
+- `tests/test_preprocess.py` now has two real assertions instead of eyeball checks: `test_newest_frame_at_last_index` and `test_reset_clears_stale_stack`. I also confirmed the frame order a second way, by differencing frames and tracking the ball's raw coordinates, scaled by 84 over 160 to match the preprocessed frame.
+- I built `tests/smoke_test.py`: two paths, acting (`env.reset()` through the preprocessor, the transform, the network, `select_action`, `env.step()`) and learning (a batch sampled from the buffer through the transform and the network), both asserting shape, dtype, device, and no NaN on the network output. Ten steps and a batch of eight ran clean.
 
 ## What's open (carrying forward)
 
-- The training loop itself: loss, `backward()`, the optimizer step, target network syncing on a schedule, and epsilon decay over time. Nothing built yet, that's today's aspiration. First thing to write next session is the weight update test: snapshot the Q and target weights, one optimizer step on Q with a synthetic batch, assert Q changed and target didn't.
+- The training loop itself: loss, `backward()`, the optimizer step, target network syncing on a schedule, and epsilon decay over time. None of it is built yet. It was today's aspiration. First thing to write next session is the weight update test: snapshot the Q and target weights, one optimizer step on Q with a synthetic batch, assert Q changed and target didn't.
 - Action is hardcoded to `0` in `visual_check.py`'s `buffer.push()` call. Needs to be the actual action taken once the training loop exists.
 - `smoke_test.py`'s learning path only checks `current_batch` from `buffer.sample()`. The other four fields, action, reward, next state, done, get discarded with `_` and never asserted.
 - `run_acting_loop` gets called once by each test function, so the smoke test builds a fresh env and network twice for one run instead of once.
 
 ## Anything surprising or worth flagging
 
-- I want to remember the `*255` bug as a category, not just an incident. Multiplying already normalized uint8 data by 255 wraps around instead of erroring, and the result was still a recognizable, plausible looking Pong frame, just inverted like a photo negative. It survived my eyeball checks because it looked fine. That's the dangerous kind of bug, the one that doesn't crash.
+- I want to remember the `*255` bug as a category, not just an incident. Multiplying already normalized uint8 data by 255 wraps around instead of erroring, and the result was still a recognizable, plausible looking Pong frame, just inverted like a photo negative. It slipped past my eyeball checks because it looked fine, and it never crashed, so nothing else caught it either.
 - I added a comment in `visual_check.py` explaining why pushing a cross episode `next_state` on a terminal transition is safe: the Bellman target masks the bootstrap term by `(1 - done)`, so that `next_state` never actually gets read. I wrote it so a future refactor doesn't decouple `done` from that assumption without knowing why it mattered.
-- The smoke test's wording in this file was wrong in three places, not just today's Floor but the Aspiration lines from two earlier sessions too. All of them described a sampled batch feeding directly into `select_action`, which would crash on `select_action`'s `.item()` call. It stayed uncaught until I had to write the actual code and be specific about which tensor goes where. I reworded all three into two separate paths instead of one chain: the acting path takes the live batch of one state through `select_action`, and the learning path takes the sampled batch through the transform and the network only, `select_action` never sees it.
+- The smoke test's wording in this file was wrong in three places, not just today's Floor but the Aspiration lines from two earlier sessions too. All of them described a sampled batch feeding directly into `select_action`, which would crash on `select_action`'s `.item()` call. It stayed uncaught until I had to write the actual code and be specific about which tensor goes where. I reworded all three into two separate paths instead of one chain: the acting path takes the live batch of one state through `select_action`, and the learning path takes the sampled batch through the transform and the network only, so `select_action` never sees it.
 - I set `EPSILON = 0.0` in the smoke test on purpose, not as a leftover default. A nonzero epsilon would route the action through `select_action`'s random branch, which never reads `q_values`, so the forward pass and the network's actual output would never get exercised. A test set up that way would pass without testing anything.
-- I stopped at the aspiration boundary on purpose today instead of drifting past it. Floor was met, both items, and once that was confirmed I pushed the training step function to next session deliberately, not because time ran out.
+- I stopped at the aspiration on purpose today instead of drifting into it. I met both floor items, and once I'd confirmed that, I moved the training step to next session by choice, not because I ran out of time.
 
 ---
 
@@ -278,22 +278,22 @@
 
 ## What landed today
 
-- `src/train.py` built: `train_step` takes the raw batch from `ReplayBuffer.sample()`, calls `transform` itself, and returns the loss as a float.
-- `tests/test_train.py` built: Q params move and target params don't, the loss matches a hand computed value on a fixture where both networks return fixed Q values, and a terminal batch ignores `next_state`. All three pass.
-- `scripts/visual_check.py` reworked: paddle height derived per run from the raw frame, the stack asserted on every step and after every reset, the ball tracked through all 4 slots, and an episode boundary forced at step 10 so that branch finally runs. Reran it, clean.
+- I built `src/train.py`: `train_step` takes the raw batch from `ReplayBuffer.sample()`, calls `transform` itself, and returns the loss as a float.
+- I built `tests/test_train.py`: Q params move and target params don't, the loss matches a hand computed value on a fixture where both networks return fixed Q values, and a terminal batch ignores `next_state`. All three pass.
+- I reworked `scripts/visual_check.py`: paddle height derived per run from the raw frame, the stack asserted on every step and after every reset, the ball tracked through all 4 slots, and an episode boundary forced at step 10 so that branch finally runs. I reran it and it's clean.
 - `scripts/check_environment.py` now reports the baselines: 6144 MiB VRAM total with 5081 free, 21.0 MiB for both networks, 31.86 GiB host RAM, 5.26 GiB for the buffer at capacity 100,000.
-- `docs/architecture.md`: no crop before the resize and the buffer storing every frame twice both recorded as known choices.
+- `docs/architecture.md` now records two known choices: no crop before the resize, and the buffer storing every frame twice.
 
 ## What's open (carrying forward)
 
 - The loop. Still the aspiration, didn't land. First thing is proving a fixed batch trained repeatedly drives the loss toward zero, since nothing shows `train_step` learns yet.
-- `env.action_space` is unseeded, so the last run had both paddles fully visible and neither extreme got checked. Seeding it plus a driven UP and DOWN rollout would put both in every run.
+- `env.action_space` is unseeded, so the last run had both paddles fully visible and neither extreme was checked. Seeding it plus a driven UP and DOWN rollout would put both in every run.
 - `FORCED_BOUNDARY_STEP` is scaffolding. Comes out once real episodes terminate inside the loop.
 - Action is still hardcoded to `0` in `buffer.push()`. Carried from last session, resolves when the loop supplies a real action.
 
 ## Anything surprising or worth flagging
 
-- I widened a failing expectation instead of fixing the derivation. My expected 3 or 4 started flagging legitimate frames at 6 and 7, and I widened the band to 1 through 7 rather than ask why. A band that can't fail reads as green while it's stopped testing anything.
+- I widened a failing expectation instead of fixing the derivation. My expected 3 or 4 started flagging legitimate frames at 6 and 7, and I widened the band to 1 through 7 rather than asking why. A band that wide can't fail, so it shows green while testing nothing.
 - The motion check used to drop empty slots and difference what was left, so an occluded middle slot made slots 0 and 3 look one frame apart. Today's run had slot 3 empty and reported 2 of 3 pairs instead of hiding it.
 - The buffer stack and the same stack through `transform` came back with identical ball coordinates. That's the slot ordering proof, and until today it was me looking at a PNG.
 
@@ -311,11 +311,10 @@
 
 ## What landed today
 
-- Reoriented: walked the pipeline file by file to refamiliarize myself with the codebase.
-- Added `test_terminal_target_equals_reward` to `tests/test_train.py`. It uses constant networks so the current Q value is `[-1.0, 5.0]` and the best next state Q value is `10.0`. Every transition is marked done, so the target is the reward alone and the hand computed loss is 4.0.
-- Verified the new test by breaking the `targets` line two ways. One multiplied the reward by the future value and gave 17.5. The other zeroed the whole target on terminal transitions, reward included, and gave 2.5. I computed both losses by hand before running, and both failures matched.
-- Did a comment and docstring consistency pass across all test files.
-- 27 of 27 pass.
+- I walked the pipeline file by file to get back into the codebase.
+- I added `test_terminal_target_equals_reward` to `tests/test_train.py`. It uses constant networks so the current Q value is `[-1.0, 5.0]` and the best next state Q value is `10.0`. Every transition is marked done, so the target is the reward alone and the hand computed loss is 4.0.
+- I verified the new test by breaking the `targets` line two ways. One multiplied the reward by the future value and gave 17.5. The other zeroed the whole target on terminal transitions, reward included, and gave 2.5. I computed both losses by hand before running, and both failures matched.
+- All tests pass.
 
 ## What's open (carrying forward)
 
@@ -349,15 +348,15 @@
 
 ## What landed today
 
-- Added `test_train_step_overfits_fixed_batch` to `tests/test_train.py`. It calls `train_step` 200 times on one seeded batch of four transitions and asserts the final loss falls below 1% of the initial loss. It passes.
-- Answered the five training decisions for the real run:
+- I added `test_train_step_overfits_fixed_batch` to `tests/test_train.py`. It calls `train_step` 200 times on one seeded batch of four transitions and asserts the final loss falls below 1% of the initial loss. It passes.
+- I answered the five training decisions for the real run:
   - **When to train:** every 4 env steps.
   - **When to start:** after 50,000 transitions are in the buffer.
   - **Episode boundary:** reset the env and the frame stack, and keep the buffer, the networks, and the optimizer.
   - **Terminated vs. truncated:** only `terminated` stops bootstrapping. A truncated game was cut off by a time limit and could have kept going, so its next state still has value.
   - **Target sync:** every 10,000 gradient updates.
-- Built `train()` in `src/train.py` and `scripts/tiny_train.py`, which calls the same function with tiny settings. One loop, two configs, so the tiny run actually says something about the real one. Actions go through `select_action` instead of inline epsilon greedy logic, so that behavior lives in one tested place.
-- Ran the tiny loop on the MacBook Air. It ran to completion, started training after warmup, synced the target on schedule, reset cleanly after an episode ended, and kept the loss finite throughout.
+- I built `train()` in `src/train.py` and `scripts/tiny_train.py`, which calls the same function with tiny settings. One loop, two configs, so the tiny run actually says something about the real one. Actions go through `select_action` instead of inline epsilon greedy logic, so that behavior lives in one tested place.
+- I ran the tiny loop on the MacBook Air. It finished, started training after warmup, synced the target on schedule, reset cleanly after an episode ended, and kept the loss finite throughout.
 
 ## What's open (carrying forward)
 
@@ -396,9 +395,9 @@
 
 ## What landed today
 
-- Proved the overfit test can fail. The baseline passed at a ratio of 8.446e-05. With `optimizer.step()` commented out, the loss never moved, 2.880e-01 to 2.880e-01, ratio 1.0. With `optimizer.zero_grad()` commented out, the loss went up instead, ratio 3.2. The test passed again after each restore, at 1.744e-07 and 5.432e-04, and `git diff src/train.py` comes back empty.
+- I proved the overfit test can fail. The baseline passed at a ratio of 8.446e-05. With `optimizer.step()` commented out, the loss never moved, 2.880e-01 to 2.880e-01, ratio 1.0. With `optimizer.zero_grad()` commented out, the loss went up instead, ratio 3.2. The test passed again after each restore, at 1.744e-07 and 5.432e-04, and `git diff src/train.py` comes back empty.
 - I'm keeping the 1% bar on the overfit test. Six healthy runs ranged from 1.744e-07 to 5.432e-04, and the two breaks landed at 1.0 and 3.2. So the bar sits in a gap of almost four orders of magnitude, 18x above the worst healthy run and 100x below the nearest failure. Nothing I can produce lands in that gap.
-- Set the exploration schedule and run length:
+- I set the exploration schedule and run length:
   - **Epsilon start:** 1.0.
   - **Epsilon end:** 0.01, so the back half of training has very little random action noise, and improvements after 250k mostly come from learning.
   - **Decay steps:** 250,000, so exploration drops off early enough that most of Run 1 tests the learned policy.
@@ -407,36 +406,35 @@
 - Sticky actions are off for Run 1. `ALE/Pong-v5` defaults to `repeat_action_probability=0.25`, but the DQN papers had none, and the +18 aspiration is tied to that setup. It's passed in as a config value, not hardcoded.
 - Action space: all 6. The DQN papers used each game's minimal legal action set, which for Pong is six, and the +18 aspiration depends on matching that. The six collapse into three behaviors in pairs, so I'm keeping the full set to stay comparable, not for extra control.
 - The demo's three bars collapse each pair with `max`. The policy is argmax over all six, so the tallest bar is always the action the agent actually picked. Mean or sum could put a bar on top while the agent does something else.
-- Rewrote the pre registered prediction so it can fail. A plateau is the trailing mean over the last 100 episodes moving less than 1.0 across 200 episodes. It should cross 0 before step 1.2M, and still being below 0 at 1.2M means the schedule is insufficient.
+- I rewrote the pre registered prediction so it can fail. A plateau is the trailing mean over the last 100 episodes moving less than 1.0 across 200 episodes. It should cross 0 before step 1.2M, and still being below 0 at 1.2M means the schedule is insufficient.
 - The replay buffer stays at 100,000, which is 5.26 GiB of the 18.69 GiB free. 200k would take 10.5 GiB and could start paging.
-- Decided the last three hyperparameters. `batch_size` 32 and `gamma` 0.99 both match Nature, and neither depends on the optimizer. `learning_rate` 1e-4 is a deliberate change, since Nature used RMSProp at 0.00025 and learning rates don't carry over to Adam.
-- Added `repeat_action_probability` and `seed` as parameters to `train()`. The sticky value gets read back from the emulator at startup instead of echoing the argument, so what prints is what the env is actually running.
-- Implemented seeding. `np.random.seed` covers the exploration draw in `select_action` and the batch draw in `ReplayBuffer.sample`. `torch.manual_seed` covers network init, and the env only takes the seed on the first reset.
-- Checked the seeding two ways. Two CPU runs at seed 0 came back byte identical, and a run at seed 1 differed in loss, episode length and reward. The matching pair only proved that something fixes the RNG. It took the seed 1 run to prove it's actually the seed parameter.
-- Added a startup block that prints the device, seed, sticky actions, action meanings and network output size, plus an assert on the output size from a real forward pass. Floor 3's checks now happen on every run instead of by hand. I also checked the extra forward pass against an earlier CPU run to make sure it doesn't change anything.
-- Wrote `scripts/real_train.py`. Its keys match `train()`'s signature and `tiny_train.py` exactly, so the two configs can't drift apart. The derived numbers check out: 487,501 gradient updates, 48 target syncs, epsilon 0.802 at the first update, and 5.26 GiB for the buffer.
-- Changed `epsilon_end` in `scripts/tiny_train.py` from 0.1 to 0.01. It was the only value that differed from the real config without being a time or memory number, which made that file's header comment wrong.
-- Wrote `docs/launch_checklist.md`. It has three sections, one per stage of the run, and only the checks the code can't do on its own.
+- I decided the last three hyperparameters. `batch_size` 32 and `gamma` 0.99 both match Nature, and neither depends on the optimizer. `learning_rate` 1e-4 is a deliberate change, since Nature used RMSProp at 0.00025 and learning rates don't carry over to Adam.
+- I added `repeat_action_probability` and `seed` as parameters to `train()`. The sticky value gets read back from the emulator at startup instead of echoing the argument, so what prints is what the env is actually running.
+- I implemented seeding. `np.random.seed` covers the exploration draw in `select_action` and the batch draw in `ReplayBuffer.sample`. `torch.manual_seed` covers network init, and the env only takes the seed on the first reset.
+- I checked the seeding two ways. Two CPU runs at seed 0 came back byte identical, and a run at seed 1 differed in loss, episode length, and reward. The matching pair only proved that something fixes the RNG. It took the seed 1 run to prove it's actually the seed parameter.
+- I added a startup block that prints the device, seed, sticky actions, action meanings, and network output size, plus an assert on the output size from a real forward pass. Floor 3's checks now happen on every run instead of by hand. I also checked the extra forward pass against an earlier CPU run to make sure it doesn't change anything.
+- I wrote `scripts/real_train.py`. Its keys match `train()`'s signature and `tiny_train.py` exactly, so the two configs can't drift apart. The derived numbers check out: 487,501 gradient updates, 48 target syncs, epsilon 0.802 at the first update, and 5.26 GiB for the buffer.
+- I changed `epsilon_end` in `scripts/tiny_train.py` from 0.1 to 0.01. It was the only value that differed from the real config without being a time or memory number, which made that file's header comment wrong.
+- I wrote `docs/launch_checklist.md`. It has three sections, one per stage of the run, and only the checks the code can't do on its own.
 - I'm accepting GPU nondeterminism for Run 1. The case study's claim is that DQN learns Pong, not that one exact run replays. So bit for bit reproducibility isn't worth an unknown slowdown on a run that has to finish before Oct 12.
-- Tested the `nvidia-smi` logger command before putting it in the checklist. All five query fields are valid, and `-f` writes clean ASCII. At idle the card sits at 40 C and 315 MHz, with 1192 MiB of the 6144 already in use, so the VRAM I actually have at launch is closer to 4.9 GiB than 6.
+- I tested the `nvidia-smi` logger command before putting it in the checklist. All five query fields are valid, and `-f` writes clean ASCII. At idle the card sits at 40 C and 315 MHz, with 1192 MiB of the 6144 already in use, so the VRAM I actually have at launch is closer to 4.9 GiB than 6.
 
 ## What's open (carrying forward)
 
 - The whole aspiration moves to tomorrow: logging, checkpointing, `scripts/visual_check.py`, and the Run 1 launch. That's still inside the Oct 6 to 8 block.
 - Three checklist items can't be ticked until logging and checkpointing exist. The decision to put the output path outside OneDrive has nowhere to live until then either.
 - There's no evaluation path. The bar is defined over 100 evaluation episodes, but `train()` has no evaluation epsilon and no evaluation loop, so the 1.2M prediction uses training episodes as a stand in.
-- I haven't checked which way `RIGHT` moves the paddle. The names are joystick names, so labelling the demo's bars from them could flip Up and Down.
+- I haven't checked which way `RIGHT` moves the paddle. The names are joystick names, so labeling the demo's bars from them could flip Up and Down.
 - The determinism throughput comparison, for the Run 2 decision.
-- Find one implementation that actually uses Adam at 1e-4, so the writeup can name it instead of just saying it's common.
+- Find one implementation that actually uses Adam at 1e-4, so the write up can name it instead of just saying it's common.
 - Still in `scripts/visual_check.py` from Sept 12: action hardcoded to `0`, `FORCED_BOUNDARY_STEP`, and the unseeded action space.
 
 ## Anything surprising or worth flagging
 
 - Sticky actions are on by default in `ALE/Pong-v5`, at 0.25. At the epsilon I'd just picked, the environment would have overridden the policy about 25 times more often than my own exploration does. That would have made my whole argument for 0.01 over 0.1 pointless. I worked out the schedule before checking the environment defaults.
-- The six actions aren't six behaviors. My first written reason for keeping all six was that the full action space lets the agent learn a complete control policy, and that isn't true for Pong. The decision survived. The reason didn't.
+- The six actions aren't six behaviors. My first written reason for keeping all six was that the full action space lets the agent learn a complete control policy, and that isn't true for Pong. I kept the decision but dropped that reason.
 - Seeding doesn't make a GPU run reproducible, and the drift shows up in behavior, not just in the numbers. Two GPU runs at seed 0 ended episode 1 at steps 900 and 928. A slightly different weight flips an argmax, which changes the action, which changes the data.
 - Two identical runs weren't enough to prove the seeding worked. They showed the run was deterministic, not that the seed was what made it that way. Only changing the seed and watching the output change proved the parameter actually gets used.
-- 1192 MiB of the 6144 is already in use at idle, so the VRAM I have at launch is closer to 4.9 GiB than 6.
 
 ---
 
@@ -463,15 +461,15 @@
 Floor 1 and Floor 2 are done. Floor 3 moves to tomorrow.
 
 - `episodes.csv` writes one row per finished episode, and each row goes to disk as soon as it's written: `episode`, `env_step`, `reward`, `episode_steps`, `epsilon`, `gradient_updates`, `buffer_size`, `mean_loss`, `wall_clock_s`. `buffer_size` wasn't in the plan. I added it so Floor 3's "fills the replay buffer" can actually be seen, not guessed. `mean_loss` is blank, not 0.0, when no update ran.
-- Built `src/checkpoint.py`. A checkpoint holds the Q weights, the target weights, the Adam state, the numpy, torch and CUDA RNG states, and the `env_step`, `episode` and `gradient_updates` counters. Without those counters, a resume would restart the epsilon schedule and the target sync. The buffer is left out, at 5.26 GiB a save. Saves go to a temp name and then get renamed, so dying mid write can't leave a half written newest checkpoint. Step 0 plus every 50,000 steps, so 40 files at 27 MB.
-- Built `src/run_paths.py`. There's one `RUNS_ROOT`, at `~/pong-runs`, outside the OneDrive sync root, and both launch scripts import it, so they can't drift. Tiny runs go under `~/pong-runs/tiny`, so they never take a real run number.
+- I built `src/checkpoint.py`. A checkpoint holds the Q weights, the target weights, the Adam state, the numpy, torch, and CUDA RNG states, and the `env_step`, `episode`, and `gradient_updates` counters. Without those counters, a resume would restart the epsilon schedule and the target sync. The buffer is left out, at 5.26 GiB a save. Saves go to a temp name and then get renamed, so dying mid write can't leave a half written newest checkpoint. Step 0 plus every 50,000 steps, so 40 files at 27 MB.
+- I built `src/run_paths.py`. There's one `RUNS_ROOT`, at `~/pong-runs`, outside the OneDrive sync root, and both launch scripts import it, so they can't drift. Tiny runs go under `~/pong-runs/tiny`, so they never take a real run number.
 - Each run's `run_config.json` holds every config value, plus the device, the GPU name, the sticky actions readback, the action count, `git_dirty` and the full commit hash. `train()` refuses to start if `episodes.csv` already exists. It also refuses on a dirty tree unless `allow_dirty` is passed, since a hash recorded with modified files doesn't describe what actually ran. Untracked files count too, because `src/checkpoint.py` and `src/run_paths.py` were untracked this morning and `train()` imports both.
-- `real_train.py` now takes `--total-steps`, `--output-dir` and `--allow-dirty`. That makes the warmup pass just Run 1 with one number changed, not a separate script. Since epsilon decays from step 0, a 70,000 step warmup is literally Run 1's first 70,000 steps.
-- `tiny_train.py` went from 1,000 to 1,500 steps, and it now asserts the log has at least one row. Episode 1 ended at 838, 838, 935, 838 and 838 across five runs, so 1,000 only left 65 steps of margin before a run would log nothing and still print `done:`.
-- Built `scripts/play_checkpoint.py`. It loads a checkpoint, plays whole episodes, and reports the mean reward, an action histogram, and the counters from the file. It checks the load actually worked instead of assuming it did, and it only prints a verdict at 100 episodes or more.
-- `scripts/visual_check.py`: I replaced the hardcoded action `0` with the sampled action and removed `FORCED_BOUNDARY_STEP`. One `SEED = 42` now feeds `np.random.seed`, `env.reset` and `env.action_space.seed`. `BUILD_STEPS` went from 60 to 1,200, based on a measurement instead of a guess: the first episode ends at 1100 at seed 42 and at 959 at seed 7. I renamed the paddle labels to `left (opponent)` and `right (agent)`, since "CPU" got confused with the training device.
-- Reran it clean: transform round trip diff 0, one ball component, left paddle height 7 inside the expected set of 6 or 7, column deltas 2.0, 2.0, 2.0 with no sign changes, and one real episode boundary at step 1100.
-- Checked these instead of assuming them: the overwrite refusal raises, a blank `mean_loss` shows up when nothing trained, the final checkpoint fallback produces 0, 400, 800, 900 at `total_steps` 900, a loaded checkpoint returns the counters the run printed, `taskkill /F` left 48 rows intact with `close()` never running and no `.tmp` left behind, and 100 episodes played at 4.05 percent random against the 0.05 target. I also proved both new assertions can fail. 28 of 28 tests pass.
+- `real_train.py` now takes `--total-steps`, `--output-dir`, and `--allow-dirty`. That makes the warmup pass just Run 1 with one number changed, not a separate script. Since epsilon decays from step 0, a 70,000 step warmup is literally Run 1's first 70,000 steps.
+- `tiny_train.py` went from 1,000 to 1,500 steps, and it now asserts the log has at least one row. Episode 1 ended at 838, 838, 935, 838, and 838 across five runs, so 1,000 only left 65 steps of margin before a run would log nothing and still print `done:`.
+- I built `scripts/play_checkpoint.py`. It loads a checkpoint, plays whole episodes, and reports the mean reward, an action histogram, and the counters from the file. It checks the load actually worked instead of assuming it did, and it only prints a verdict at 100 episodes or more.
+- `scripts/visual_check.py`: I replaced the hardcoded action `0` with the sampled action and removed `FORCED_BOUNDARY_STEP`. One `SEED = 42` now feeds `np.random.seed`, `env.reset`, and `env.action_space.seed`. `BUILD_STEPS` went from 60 to 1,200, based on a measurement instead of a guess: the first episode ends at 1100 at seed 42 and at 959 at seed 7. I renamed the paddle labels to `left (opponent)` and `right (agent)`, since "CPU" was easy to confuse with the training device.
+- I reran it and it came back clean: transform round trip diff 0, one ball component, left paddle height 7 inside the expected set of 6 or 7, column deltas 2.0, 2.0, 2.0 with no sign changes, and one real episode boundary at step 1100.
+- I checked these instead of assuming them: the overwrite refusal raises, a blank `mean_loss` shows up when nothing trained, the final checkpoint fallback produces 0, 400, 800, 900 at `total_steps` 900, a loaded checkpoint returns the counters the run printed, `taskkill /F` left 48 rows intact with `close()` never running and no `.tmp` left behind, and 100 episodes played at 4.05 percent random against the 0.05 target. I also proved both new assertions can fail. All tests pass.
 
 ## What's open (carrying forward)
 
@@ -487,7 +485,7 @@ Floor 1 and Floor 2 are done. Floor 3 moves to tomorrow.
 
 - Loading a checkpoint is where a real bug showed up, and saving one would never have found it. `map_location` moves every tensor onto the GPU, including the RNG state, and `torch.set_rng_state` rejects anything that isn't a CPU ByteTensor. So a resume would have crashed. The fix is calling `.cpu()` before restoring.
 - Seeding the action space alone didn't make `visual_check.py` repeatable. Two seeded runs still disagreed, but only on the two sampled stack sections. That's because `ReplayBuffer.sample` draws with `np.random.choice`, and nothing was seeding `np.random`.
-- Seeding that script was a trade off, not a pure win. Unseeded, every run looked at a different frame, so the paddles got checked at lots of heights by accident. Seeded, it's the same frame forever, so a rendering bug at the very bottom would now never show up, where before it might have been caught.
+- Seeding that script was a trade off, not a pure win. Unseeded, every run looked at a different frame, so the paddles were checked at lots of heights by accident. Seeded, it's the same frame forever, so a rendering bug at the very bottom would now never show up, where before it might have been caught.
 - The failure condition I wrote in advance for the playback test was wrong. It said -21 every episode in minimum steps would mean the network wasn't affecting the action. But the greedy policy picks action 2 on 2,199 of 2,292 steps, which pins the paddle somewhere it never touches the ball. With no contact, the ball's path doesn't depend on the paddle, so every episode is identical. A learned but useless constant policy produces exactly what I'd called failure. The action histogram is what actually tells them apart, so it's printed now.
 - The 806 to 816 env steps per second from the kill tests isn't the number the projection needs. `gradient_updates` is 0 on every row, so that's only the fill phase. Projecting 2,000,000 steps from it would give 41 minutes, which would be way off.
 - The run is bit for bit deterministic until the first gradient update. Two kill tests had identical episode boundaries through step 41,681, because with no updates the weights never change and both RNG sources are seeded.
@@ -504,33 +502,33 @@ Floor 1 and Floor 2 are done. Floor 3 moves to tomorrow.
 
 **Aspiration:**
 
-**Close the evaluation gap.** Run the checkpoint evaluation across a whole run, not one checkpoint at a time, and write a row per checkpoint. That way the evaluation curve can be read against the bar, instead of training reward standing in for it. Done means that file exists and Run 1's first checkpoints are in it. Evaluation shares the card with Run 1, so it only runs after I've taken Run 1's rate and temperature readings, and only on the first few checkpoints. Then if things slow down afterwards, I'll know it's the evaluation and not throttling.
+**Close the evaluation gap.** Run the checkpoint evaluation across a whole run, not one checkpoint at a time, and write a row per checkpoint. That way the evaluation curve can be read against the bar, instead of training reward standing in for it. Done means that file exists and Run 1's first checkpoints are in it. Evaluation shares the card with Run 1, so it only runs after I've taken Run 1's rate and temperature readings, and only on the first few checkpoints. Then if things slow down afterward, I'll know it's the evaluation and not throttling.
 
 ---
 
 ## What landed today
 
-- Ran the warmup pass at Run 1 settings, 120,000 steps into `run-00-warmup`. It had 131 episodes, 17,501 updates, one target sync at update 10,000, and checkpoints at 0, 50,000, 100,000 and 120,000. `run_config.json` recorded commit `f9ce3b66d9a8c41105676bba87ae8453d4e9cb82` with `git_dirty` false, matching `HEAD`. The 120,000 file is the first time the final checkpoint fallback has fired under the real config.
+- I ran the warmup pass at Run 1 settings, 120,000 steps into `run-00-warmup`. It had 131 episodes, 17,501 updates, one target sync at update 10,000, and checkpoints at 0, 50,000, 100,000, and 120,000. `run_config.json` recorded commit `f9ce3b66d9a8c41105676bba87ae8453d4e9cb82` with `git_dirty` false, matching `HEAD`. The 120,000 file is the first time the final checkpoint fallback has fired under the real config.
 - `step_00050000.pt` came out at 27 MB, against step 0's 13.5 MB. So Adam state is in it, and the loop really does update before it saves.
-- Measured the three checklist numbers. 252.1 steps per second after warmup, measured across 274 seconds from step 50,811 to 119,876, not from adjacent rows. That projects 2.20 hours for 2,000,000 steps, which finishes before Oct 12. So I'm not cutting the step count, and the pre registered 1.2M crossing stands as written. The peak load temperature was 52 °C, against the 88 limit.
+- I measured the three checklist numbers. 252.1 steps per second after warmup, measured across 274 seconds from step 50,811 to 119,876, not from adjacent rows. That projects 2.20 hours for 2,000,000 steps, which finishes before Oct 12. So I'm not cutting the step count, and the pre registered 1.2M crossing stands as written. The peak load temperature was 52 °C, against the 88 limit.
 - The fill phase ran at 809 steps per second, matching yesterday's 806 and 816. Training is 3.2 times slower, which is why the fill rate was never the number to project from.
 - Episode boundaries through step 49,987 matched yesterday's kill tests exactly, then split after the first gradient update. That's the determinism behaving exactly as expected.
-- Launched Run 1 at 13:55 into `run-01`, 2,000,000 steps, with commit `afb91fae0b1c1408009cb5385980f432c99f7ec7` recorded and `git_dirty` false. This time the loop based logger writes `gpu_log.csv` live, header included.
-- Predicted the end of run reward before reading any rows: positive, around +10. My Oct 6 pre registration has the trailing mean crossing 0 before step 1.2M, which leaves about 800,000 steps of runway at epsilon 0.01. The buffer, at 100,000 against Nature's 1,000,000, is why it could fall short. And 8,000,000 frames against Nature's 50,000,000 is why I'm not predicting the +18 aspiration.
+- I launched Run 1 at 13:55 into `run-01`, 2,000,000 steps, with commit `afb91fae0b1c1408009cb5385980f432c99f7ec7` recorded and `git_dirty` false. This time the loop based logger writes `gpu_log.csv` live, header included.
+- I predicted the end of run reward before reading any rows: positive, around +10. My Oct 6 pre registration has the trailing mean crossing 0 before step 1.2M, which leaves about 800,000 steps of runway at epsilon 0.01. The buffer, at 100,000 against Nature's 1,000,000, is why it could fall short. And 8,000,000 frames against Nature's 50,000,000 is why I'm not predicting the +18 aspiration.
 - Run 1 finished in 2.19 hours, against the 2.20 I projected. Both predictions were wrong. The trailing 100 mean never crossed 0, ending at -0.11, and at step 1.2M it was -10.17, so by the terms of the Oct 6 entry the schedule is insufficient. But the curve was still climbing at the last step and never plateaued by my own definition. Episode length more than quadrupled, with no shutouts in the last 100 episodes. So the learning is real, and the run just ran out of steps. Every figure is in [runs/run-01.md](runs/run-01.md).
-- Wrote `docs/runs/run-01.md` as the reference for this run, with every figure pulled from `run_config.json`, `episodes.csv` and `gpu_log.csv`. Run 1's story runs into the Oct 12 diagnosis block, so it needs one place to live instead of being spread over three daily entries.
-- Committed those three files for both runs under `docs/runs/`, 116 KB of text. Then I wrote `scripts/analyze_run.py` to print every figure from them. It's one command instead of the five chained one liners I started with, so a reader can check the numbers instead of trusting me. The 1.02 GB of checkpoints stays out.
+- I wrote `docs/runs/run-01.md` as the reference for this run, with every figure pulled from `run_config.json`, `episodes.csv`, and `gpu_log.csv`. Run 1's story runs into the Oct 12 diagnosis block, so it needs one place to live instead of being spread over three daily entries.
+- I committed those three files for both runs under `docs/runs/`, 116 KB of text. Then I wrote `scripts/analyze_run.py` to print every figure from them. It's one command instead of the five chained one liners I started with, so a reader can check the numbers instead of trusting me. The 1.02 GB of checkpoints stays out.
 
 ## What's open (carrying forward)
 
 - The aspiration. I didn't build the checkpoint evaluation sweep, so Run 1's result still rests on training episodes, not the 100 episode evaluation the bar is defined over.
-- Restating the pre registered crossing. The Oct 6 version got answered and failed, so Run 2 needs a new prediction based on whatever step count it uses.
+- Restating the pre registered crossing. The Oct 6 version was answered and failed, so Run 2 needs a new prediction based on whatever step count it uses.
 - Checking buffer RAM in Task Manager against the expected 5.26 GiB. Run 1 has exited, so this carries to the next run.
 - Carried forward unchanged: the driven UP and DOWN rollout in `scripts/visual_check.py`, which way `RIGHT` moves the paddle, no test covering logging or checkpointing, and the stale note at `scripts/check_environment.py` line 79.
 
 ## Anything surprising or worth flagging
 
-- The GPU is barely working. Across Run 1's 132 minutes it peaked at 42 percent utilization, 51.3 W on a card rated around 160, and 2,266 MiB of 6,144. At 253 steps per second with the card under half loaded, the bottleneck is the CPU side: one Pong instance, the frame preprocessing, and the Python loop running every step. That also explains how the fill phase hit 809 steps per second with no GPU work in it. The warmup understated all of this, peaking at 52 °C, 1,290 MHz and 30 W, because 6 minutes was never long enough to warm up fully.
+- The GPU is barely working. Across Run 1's 132 minutes it peaked at 42 percent utilization, 51.3 W on a card rated around 160, and 2,266 MiB of 6,144. At 253 steps per second with the card under half loaded, the bottleneck is the CPU side: one Pong instance, the frame preprocessing, and the Python loop running every step. That also explains how the fill phase hit 809 steps per second with no GPU work in it. The warmup understated all of this, peaking at 52 °C, 1,290 MHz, and 30 W, because 6 minutes was never long enough to warm up fully.
 - `nvidia-smi -f` buffers its output instead of writing each sample. `gpu_log.csv` sat at 0 bytes the whole run and only showed up when I stopped the process. So with that command, I can't do the five minute temperature check while the run is going.
 - The checklist item "clock not dropping as temperature rises" would have flagged this perfectly healthy run. The clock swung from 1,290 down to 795 MHz while the temperature stayed in the forties and fifties. That's just the card idling down because it doesn't have enough work. A falling clock only means throttling when the temperature is near the limit.
 
@@ -554,16 +552,16 @@ Floor 1 and Floor 2 are done. Floor 3 moves to tomorrow.
 
 The aspiration is done. The floor isn't: I held Run 2 at the 5:30 cutoff on purpose, instead of rushing the launch.
 
-- Built the evaluation sweep. `src/evaluate.py` scores one checkpoint, `scripts/sweep_eval.py` loops over a run and writes a row each, and `scripts/play_checkpoint.py` became a thin command line wrapper around the same `evaluate()`. One evaluation path with three ways in, so the sweep and the single checkpoint view can't drift apart.
-- Ran it on Run 1: 11 checkpoints at 100 episodes each, in 50.3 minutes against the 50 I estimated. No checkpoint reaches the bar. The best is -1.63 at step 1,800,000, and the final checkpoint at 2,000,000 is -4.41.
-- Scored 1,800,000 and 2,000,000 again at seed 1, on independent episodes. They came back -1.89 and -4.54. So the 2.7 point drop replicates at about 5 combined standard errors, and the means only moved 0.26 and 0.13 between seeds.
-- Added `std_reward`, `seed` and `elapsed_s` to the sweep's rows. I also added a header check that refuses to append to a file whose columns don't match, and an `eval_config.json` sidecar that records the commit, the dirty flag and the settings for each run of the sweep. I pulled `src/git_info.py` out of `train.py`, since two places needed it.
-- Built the instrumentation. `src/probe.py` makes 500 states from a fixed `PROBE_SEED` of 7. It's independent of the run seed, so two runs measure the same states. Its sha256 goes in `run_config.json`, and a `--probe` flag lets a run reuse an earlier run's file.
-- `metrics.csv` writes 21 columns every 10,000 env steps, with a row at step 0 before any update. Fourteen are Q figures: the mean max Q, the mean spread, six per action means and six argmax counts. The rest are epsilon, the buffer size, the two replay fractions and the batch count behind them.
-- Checked it on a tiny run, then measured the cost with a 120,000 step warmup at Run 2 settings. The post warmup rate was 256.1 steps per second, against 252.1 without instrumentation, so the cost is smaller than this measurement can pick up. 6,000,000 steps projects to 6.47 hours.
+- I built the evaluation sweep. `src/evaluate.py` scores one checkpoint, `scripts/sweep_eval.py` loops over a run and writes a row each, and `scripts/play_checkpoint.py` became a thin command line wrapper around the same `evaluate()`. One evaluation path with three ways in, so the sweep and the single checkpoint view can't drift apart.
+- I ran it on Run 1: 11 checkpoints at 100 episodes each, in 50.3 minutes against the 50 I estimated. No checkpoint reaches the bar. The best is -1.63 at step 1,800,000, and the final checkpoint at 2,000,000 is -4.41.
+- I scored 1,800,000 and 2,000,000 again at seed 1, on independent episodes. They came back -1.89 and -4.54. So the 2.7 point drop replicates at about 5 combined standard errors, and the means only moved 0.26 and 0.13 between seeds.
+- I added `std_reward`, `seed`, and `elapsed_s` to the sweep's rows. I also added a header check that refuses to append to a file whose columns don't match, and an `eval_config.json` sidecar that records the commit, the dirty flag, and the settings for each run of the sweep. I pulled `src/git_info.py` out of `train.py`, since two places needed it.
+- I built the instrumentation. `src/probe.py` makes 500 states from a fixed `PROBE_SEED` of 7. It's independent of the run seed, so two runs measure the same states. Its sha256 goes in `run_config.json`, and a `--probe` flag lets a run reuse an earlier run's file.
+- `metrics.csv` writes 21 columns every 10,000 env steps, with a row at step 0 before any update. Fourteen are Q figures: the mean max Q, the mean spread, six per action means, and six argmax counts. The rest are epsilon, the buffer size, the two replay fractions, and the batch count behind them.
+- I checked it on a tiny run, then measured the cost with a 120,000 step warmup at Run 2 settings. The post warmup rate was 256.1 steps per second, against 252.1 without instrumentation, so the cost is smaller than this measurement can pick up. 6,000,000 steps projects to 6.47 hours.
 - The replay fraction landed right where the morning's math said it would. I measured 0.0244 of transitions, which is 0.78 per batch of 32, against 0.77 that I'd worked out from Run 1's first 100 episodes before any of this existed.
-- `scripts/analyze_run.py`: I relabelled the update count as coming from the last logged episode, since it read like the run total and disagreed with the `done:` line. I also made it handle a missing `gpu_log.csv` instead of crashing.
-- `docs/runs/run-01.md` got an Evaluation section with both seeds, the committed `eval.csv` and `eval_seed1.csv`, and the correction that the -0.11 I reported as Run 1's result never actually measured the policy the run finished with.
+- `scripts/analyze_run.py`: I relabeled the update count as coming from the last logged episode, since it read like the run total and disagreed with the `done:` line. I also made it handle a missing `gpu_log.csv` instead of crashing.
+- `docs/runs/run-01.md` now has an Evaluation section with both seeds, the committed `eval.csv` and `eval_seed1.csv`, and the correction that the -0.11 I reported as Run 1's result never actually measured the policy the run finished with.
 
 ## What's open (carrying forward)
 
@@ -577,8 +575,8 @@ The aspiration is done. The floor isn't: I held Run 2 at the 5:30 cutoff on purp
 
 ## Anything surprising or worth flagging
 
-- The best checkpoint isn't the last one, and that holds at two seeds. Training reported -0.11 at the final step, while the final policy scores -4.41. That's because the trailing mean averages roughly the last 400,000 steps of a policy that keeps changing. While the policy is improving, that makes it look worse than it is. At the end, where it got worse, it makes it look better.
-- The Q spread shrinks instead of growing. It's 0.057 at initialisation, then 0.006 by step 60,000, after 2,501 updates. Early training makes the network worse at telling actions apart than random weights were.
+- The best checkpoint isn't the last one, and that holds at two seeds. Training reported -0.11 at the final step, while the final policy scores -4.41. That's because the trailing mean averages roughly the last 400,000 steps of a policy that keeps changing. While the policy is improving, that makes it look worse than it is. At the end, where it declined, it makes it look better.
+- The Q spread shrinks instead of growing. It's 0.057 at initialization, then 0.006 by step 60,000, after 2,501 updates. Early training makes the network worse at telling actions apart than random weights were.
 - The argmax moves as a block. All 500 probe states share one action, and that action jumps around between rows: NOOP, then FIRE, then RIGHTFIRE, then LEFT. A single concentration number would have read 1.00 on every row and hidden all of that, which is why I replaced it with the six counts.
 - The `metrics.csv` rows from step 0 to 40,000 are byte identical. No update happens before 50,000, so that proves the probe stays fixed and isn't resampled.
 - Episode boundaries match across both warmups through step 49,987 and split from episode 56. So the instrumentation doesn't use up any of the action RNG, and the split starts exactly where gradient updates start.
@@ -587,7 +585,7 @@ The aspiration is done. The floor isn't: I held Run 2 at the 5:30 cutoff on purp
 
 ---
 
-# Monday: Run 2 Writeup
+# Monday: Run 2 Write Up
 
 **Date:** 2026-10-12
 
@@ -608,18 +606,17 @@ The aspiration is done. The floor isn't: I held Run 2 at the 5:30 cutoff on purp
 
 The floor has been met, all three items. The aspiration is half done: the +18 question is settled, but I haven't picked the four clip checkpoints.
 
-- Copied Run 2's eight logs into `docs/runs/run-02/`, 296 KB, and checked every file by sha256 against its source. `probe.npy` stayed out at 13.5 MB, and so did the 121 checkpoints at 3.03 GB, same as Run 1.
-- Wrote run-02.md, with seven sections that match run-01.md: header, Config, Results, Evaluation, Throughput and hardware, Limitations, and Reproducing the figures.
-- Scored the three pre registered predictions. The crossing failed, at 2,715,875 against a 2,300,000 bound. The plateau definition fired falsely. 17 of 31 checkpoints cleared the bar at seed 0 and 18 at seed 1, with the best at +16.97 at step 5,400,000.
-- Ran the seed 1 sweep: 31 checkpoints in 190.5 minutes, against 189.6 at seed 0. The seeds agree to 0.29 points on average, and not one of the 31 differs by more than two standard errors. So the dips in the curve are the policy, not the measurement.
-- Settled the +18 question in 11 minutes instead of 80, by scoring just 5,450,000 and 5,500,000, the two around the training peak. They came back +16.61 and +16.38. So the 200,000 grid didn't skip over anything better, and I miss PLANS.md's aspiration by 1.03 points.
-- Added Check 6 to `visual_check.py`. It drives each action and reads the paddle's row. RIGHT and RIGHTFIRE move it up, LEFT and LEFTFIRE move it down, and NOOP and FIRE don't move it at all. Each pair lands on the exact same row, and four asserts fail if that ever stops being true. That closes the driven rollout I've been carrying since Oct 3.
-- Turned sticky actions off in `visual_check.py`, `check_environment.py`, `smoke_test.py` and `random_agent.py`. They were running at the v5 default of 0.25 while training ran at 0.0. The seeded episode now ends at step 946 instead of 1100.
-- Gave `visual_check.py` a pass summary that exits with 1 on failure. Checks 3 and 4 report by printing instead of raising, so a bare "all passed" line would have printed right over a MISMATCH.
-- Committed the Run 2 warmup's three logs, 9.6 KB, to match `run-00-warmup`. That brought back two figures I'd cut because I couldn't verify them: 256.1 steps per second and the 6.47 hour projection.
-- Fixed run-01.md's prose. It gave 809 and 252 as Run 1's fill and post warmup rates, but both of those belong to `run-00-warmup`. Run 1's own are 837.3 and 248.9.
+- I copied Run 2's eight logs into `docs/runs/run-02/`, 296 KB, and checked every file by sha256 against its source. `probe.npy` stayed out at 13.5 MB, and so did the 121 checkpoints at 3.03 GB, same as Run 1.
+- I wrote run-02.md, with seven sections that match run-01.md: header, Config, Results, Evaluation, Throughput and hardware, Limitations, and Reproducing the figures.
+- I scored the three pre registered predictions. The crossing failed, at 2,715,875 against a 2,300,000 bound. The plateau definition fired falsely. 17 of 31 checkpoints cleared the bar at seed 0 and 18 at seed 1, with the best at +16.97 at step 5,400,000.
+- I ran the seed 1 sweep: 31 checkpoints in 190.5 minutes, against 189.6 at seed 0. The seeds agree to 0.29 points on average, and not one of the 31 differs by more than two standard errors. So the dips in the curve are the policy, not the measurement.
+- I settled the +18 question in 11 minutes instead of 80, by scoring just 5,450,000 and 5,500,000, the two around the training peak. They came back +16.61 and +16.38. So the 200,000 grid didn't skip over anything better, and I miss PLANS.md's aspiration by 1.03 points.
+- I added Check 6 to `visual_check.py`. It drives each action and reads the paddle's row. RIGHT and RIGHTFIRE move it up, LEFT and LEFTFIRE move it down, and NOOP and FIRE don't move it at all. Each pair lands on the exact same row, and four asserts fail if that ever stops being true. That closes the driven rollout I've been carrying since Oct 3.
+- I turned sticky actions off in `visual_check.py`, `check_environment.py`, `smoke_test.py`, and `random_agent.py`. They were running at the v5 default of 0.25 while training ran at 0.0. The seeded episode now ends at step 946 instead of 1100.
+- I gave `visual_check.py` a pass summary that exits with 1 on failure. Checks 3 and 4 report by printing instead of raising, so a bare "all passed" line would have printed right over a MISMATCH.
+- I committed the Run 2 warmup's three logs, 9.6 KB, to match `run-00-warmup`. That brought back two figures I'd cut because I couldn't verify them: 256.1 steps per second and the 6.47 hour projection.
+- I fixed run-01.md's prose. It gave 809 and 252 as Run 1's fill and post warmup rates, but both of those belong to `run-00-warmup`. Run 1's own are 837.3 and 248.9.
 - Both run files told a reader to run `sweep_eval.py <run_dir>`, which nothing in the repo can do, since it reads `<run_dir>/checkpoints/`. Both now name the directory that actually holds them.
-
 
 ## What's open (carrying forward)
 
@@ -634,7 +631,7 @@ The floor has been met, all three items. The aspiration is half done: the +18 qu
 
 ## Anything surprising or worth flagging
 
-- A fixed seed doesn't reproduce a run on this hardware. Run 1 and Run 2 are byte identical for 54 episodes, first differ at episode 55, where the first gradient update lands, and are 11.32 points apart by step 2,000,000. That's why prediction 1 failed, and the failure is worth more than the prediction would have been.
+- A fixed seed doesn't reproduce a run on this hardware. Run 1 and Run 2 are byte identical for 54 episodes, first differ at episode 55, where the first gradient update lands, and are 11.32 points apart by step 2,000,000. That's why prediction 1 failed. It also means one training run can't be repeated exactly on this setup.
 - For the third time, the best checkpoint isn't the last one. 5,400,000 beats 6,000,000 by 4.37 points, at 13.3 combined standard errors, and by 4.49 at 12.6 at seed 1.
 - The gap between training and evaluation replicated: -4.20 and -4.62, against Run 1's -4.30, at reward levels 17 points apart. It's structural, so a headline number has to come from a sweep, not the training log.
 - The plateau definition said the curve was stable across a window where evaluation swung 8.80 points. Since it's defined on the training curve, it can't see that, so Run 3's version has to be defined on evaluation.
@@ -731,7 +728,7 @@ The floor has been met. All four clips are recorded, and every one passed the pl
   - **First over the bar, 2,800,000:** seed 0, reward +6 (won 21 to 15), 4,796 steps, the last 30 seconds, recorded in 14.2 s.
   - **Trained, 5,400,000:** seed 0, reward +18 (won 21 to 3), 2,386 steps, the last 30 seconds, recorded in 7.3 s.
 - Three clips were recorded at `f1ba9d8` and first rally at `4f56a27`, all with a clean working tree. The records include the `imageio-ffmpeg` version, which `git_info.py` now records. `analyze_run.py` prints each clip's seed, start frame, and returns, and run-02.md's Clip selection now covers all three rules and the final clips.
-- Every function now has type hints, every test helper has a docstring, 24 comments that only restated the code are gone, and a comment in `train.py` that had been split in two is back in one piece. All 70 tests pass.
+- All tests pass.
 
 ## What's open (carrying forward)
 
@@ -746,5 +743,47 @@ The floor has been met. All four clips are recorded, and every one passed the pl
 - Episode length was a weaker stand in for rallies than I expected. The rule picked 600,000 because its episodes run longer, and returns really do start there, but they're patchy: across seeds 0 to 8, six episodes return the ball at least once and only a few return it several times. The seed 0 episode returns it zero times in 1,128 steps.
 - The first rally clip is the first one where the agent scores, taking 3 points before losing 21 to 3.
 - H.264 shrank the clips by far more than the cut alone explains. The 30 second clips are 45 to 63 KB each, against 0.9 to 6.3 MB for the full length `mp4v` versions.
+
+---
+
+# Thursday: README and Architecture
+
+**Date:** 2026-10-15
+
+**Floor:**
+
+1. **Update the README.** Add Run 2's result, the evaluation sweep (`sweep_eval.py`, built on `evaluate.py`), `analyze_run.py --compare`, recording clips with `record_clip.py`, how to run the tests, and the full list of files a run writes. Done means someone new could go from setup to reproducing Run 2's figures using only the README.
+2. **Bring `architecture.md` up to date.** Its module table names 8 of the 20 modules in `src/` and `scripts/`, and nothing from training, evaluation, instrumentation, or clip recording. Add the other 12, with what each one does and how they connect.
+
+**Aspiration:**
+
+1. **Write `scripts/watch_checkpoint.py`.** A live game window for a trained checkpoint, like `random_agent.py`, so the trained agent can be watched playing without recording a clip.
+
+---
+
+## What landed today
+
+The floor has been met, and so has the aspiration.
+
+- I rewrote the README for Run 2. It starts with the result and what a reward of +16.97 means, then goes setup, checking it works, reproducing every figure without a GPU, training, what a run writes, and evaluating a run. It had been training Run 1, since `real_train.py` defaults to 2,000,000 steps, so the Run 2 command now passes `--total-steps 6000000`. It also said `pip install torch` gives a CPU only build on Linux, which is only true on Windows.
+- I brought `architecture.md` up to date. It named 8 of the 20 modules this morning and now names all 21, with four new components: checkpoints, the probe and instrumentation, evaluation, and run records. The acting diagram had skipped the Q network, and the action selector was credited with the epsilon schedule, which actually lives in `train()`. A new Tests section says what each of the 15 test files proves.
+- I wrote `scripts/watch_checkpoint.py`. It plays a checkpoint in a game window through `evaluate()`, so it shows the same games the sweep scored, and it defaults to 5,400,000. `evaluate()` has a new `render` argument for the window. Played at seed 0, 5,400,000 won 21 to 3 in 2,386 steps, the same as the Trained clip.
+- I moved `random_agent.py` from `src/` to `scripts/`, since it runs rather than being imported. It now plays a set number of games and prints each score, like `watch_checkpoint.py`, instead of looping forever. At seed 0 it loses 21 to 1 in 902 steps, and it plays the same game every time.
+- I fixed three ways the scripts could fail silently. `sweep_eval.py` decided which checkpoints were done by step alone, so a seed 1 sweep pointed at seed 0 rows printed "nothing to do" and exited as if it had finished. It now refuses rows scored with other settings, and stops if `--every` matches no checkpoint. `record_clip.py` now refuses to replace a clip without `--overwrite`. All four evaluation scripts now stop on an epsilon outside 0 to 1, a negative seed, or zero episodes, through one shared `check_eval_args()`.
+- run-02.md now cites the Stable Baselines3 docs, where Adam at 1e-4 is the documented DQN default. That closes the Oct 6 item about naming a source instead of saying it's common.
+- `real_train.py`'s header said the warmup ran 70,000 steps. Both warmups ran 120,000, so it says that now.
+- I closed three old items without new code. The buffer RAM check is answered by both full runs finishing with the full 5.26 GiB buffer and no slowdown from paging. The determinism comparison was for the Run 2 decision, which is already made. The up over down question is already stated in run-02.md as possibly coming from where the probe puts the ball, and no result depends on which it is.
+- All tests pass.
+
+## What's open (carrying forward)
+
+- Nothing is open. Every item I'd been carrying is either done or closed with a reason.
+
+## Anything surprising or worth flagging
+
+- The sweep could have quietly skipped a whole seed. It only checked step numbers when resuming, so pointing a seed 1 sweep at a file of seed 0 rows printed "nothing to do" and exited like it had finished. Nothing in Run 1 or Run 2 hit this, since every rerun used a new `--out`, but it's the same kind of bug as the `*255` one: no crash, and a result that looks fine.
+- The README had been telling people to train Run 1. `real_train.py` defaults to 2,000,000 steps, and I launched Run 2 with `--total-steps 6000000` by hand, so nothing ever showed the README was wrong.
+- The docs had drifted without anything failing. `architecture.md` still named 8 modules out of 20, its acting diagram skipped the Q network, and `real_train.py`'s header gave the wrong warmup length. Tests check the code, so only reading the docs against the code caught these.
+
 
 ---

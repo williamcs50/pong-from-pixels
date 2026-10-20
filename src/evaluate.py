@@ -1,3 +1,8 @@
+# src/evaluate.py
+# Score a checkpoint over a number of games at a fixed seed and epsilon. Every script
+# that plays a checkpoint plays through evaluate(), so they all see the same games.
+
+import argparse
 import collections
 import statistics
 
@@ -19,6 +24,18 @@ EVAL_EPSILON = 0.05
 EVAL_EPISODES = 100  # the bar in docs/PLANS.md
 
 
+def check_eval_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    # A usage error now, for settings evaluate() would otherwise play without complaint.
+    if not 0.0 <= args.epsilon <= 1.0:
+        parser.error(f"--epsilon is a probability, so it must be from 0 to 1, got {args.epsilon}")
+    if args.seed < 0:
+        parser.error(f"--seed must be 0 or more, got {args.seed}")
+    if getattr(args, "episodes", 1) < 1:
+        parser.error(f"--episodes must be 1 or more, got {args.episodes}")
+    if not 0.0 <= getattr(args, "repeat_action_probability", 0.0) <= 1.0:
+        parser.error(f"--repeat-action-probability must be from 0 to 1, got {args.repeat_action_probability}")
+
+
 def evaluate(
     checkpoint_path: str,
     *,
@@ -28,8 +45,10 @@ def evaluate(
     repeat_action_probability: float,
     device: torch.device,
     record_video: bool = False,
+    render: bool = False,
 ) -> dict:
-    env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability)
+    env = gymnasium.make("ALE/Pong-v5", repeat_action_probability=repeat_action_probability,
+                         render_mode="human" if render else None)
     env.action_space.seed(seed)
     n_actions = env.action_space.n
 
@@ -46,8 +65,8 @@ def evaluate(
     q_network.eval()
     torch.manual_seed(seed)
 
-    # A network that was never loaded plays episodes without crashing too, so a no-op
-    # load would otherwise pass every check below.
+    # A network that was never loaded plays episodes without crashing too, so a load
+    # that did nothing would otherwise pass every check below.
     after = q_network.state_dict()
     assert any(not torch.equal(before[k], after[k]) for k in before), (
         f"load_checkpoint changed no weights for {checkpoint_path}"

@@ -1,5 +1,6 @@
 import os
 import sys
+from unittest import mock
 
 import torch
 import torch.nn.functional as F
@@ -7,12 +8,13 @@ import torch.optim as optim
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.device import pick_device
 from src.q_network import QNetwork
 
 BATCH_SIZE = 32
 N_ACTIONS = 6
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 
 
 def make_batch() -> torch.Tensor:
@@ -59,7 +61,6 @@ def test_target_network_sync() -> None:
 
     optimizer = optim.Adam(online_net.parameters(), lr=1e-3)
 
-    # Confirm target params aren't in the optimizer.
     optimizer_param_ids = {id(p) for group in optimizer.param_groups for p in group["params"]}
     online_param_ids = {id(p) for p in online_net.parameters()}
     target_param_ids = {id(p) for p in target_net.parameters()}
@@ -75,19 +76,16 @@ def test_target_network_sync() -> None:
     loss.backward()
     optimizer.step()
 
-    # Online net took a gradient step, params should have changed.
     for name, online_param in online_net.named_parameters():
         assert not torch.allclose(online_param.detach(), target_snapshot[name]), (
             f"Expected online param '{name}' to change after the optimizer step"
         )
 
-    # Target net isn't in the optimizer, params should be untouched.
     for name, target_param in target_net.named_parameters():
         assert torch.allclose(target_param.detach(), target_snapshot[name]), (
             f"Target param '{name}' changed even though it wasn't in the optimizer"
         )
 
-    # Periodic sync should bring them back into equality.
     target_net.load_state_dict(online_net.state_dict())
 
     for (online_name, online_param), (target_name, target_param) in zip(
@@ -101,8 +99,18 @@ def test_target_network_sync() -> None:
     print("PASS  target network behavior")
 
 
+def test_pick_device_order() -> None:
+    cases = {(True, True): "cuda", (True, False): "cuda", (False, True): "mps", (False, False): "cpu"}
+    for (cuda, mps), expected in cases.items():
+        with mock.patch.object(torch.cuda, "is_available", return_value=cuda), \
+             mock.patch.object(torch.backends.mps, "is_available", return_value=mps):
+            assert pick_device().type == expected, f"cuda={cuda}, mps={mps} picked {pick_device()}"
+    print("PASS  pick_device prefers an NVIDIA GPU, then an Apple GPU, then the CPU")
+
+
 if __name__ == "__main__":
     test_output_shape_and_device()
     test_backward_pass()
     test_target_network_sync()
+    test_pick_device_order()
     print("\nAll tests passed!")

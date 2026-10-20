@@ -5,8 +5,8 @@
 # the first rally clip rule instead: the first seed whose episode has a rally, cut
 # to start just before it.
 #
-#   python scripts/record_clip.py $HOME\pong-runs\run-02\checkpoints\step_05400000.pt
-#   python scripts/record_clip.py $HOME\pong-runs\run-02\checkpoints\step_00600000.pt --rally
+#   python scripts/record_clip.py ~/pong-runs/run-02/checkpoints/step_05400000.pt
+#   python scripts/record_clip.py ~/pong-runs/run-02/checkpoints/step_00600000.pt --rally
 
 import argparse
 import datetime
@@ -22,7 +22,8 @@ import imageio_ffmpeg
 import numpy as np
 import torch
 
-from src.evaluate import EVAL_EPSILON, evaluate
+from src.device import pick_device
+from src.evaluate import EVAL_EPSILON, check_eval_args, evaluate
 from src.git_info import git_state, software_versions
 
 FRAMESKIP = 4  # Pong v5 repeats each action for 4 emulator frames
@@ -37,7 +38,7 @@ CLIP_FRAMES = CLIP_SECONDS * FPS
 ACTION_NAMES = ("NOOP", "FIRE", "RIGHT", "LEFT", "RIGHTFIRE", "LEFTFIRE")
 PADDLE_GROUPS = {"up": (2, 4), "down": (3, 5), "still": (0, 1)}
 
-# From scripts/visual_check.py: the ball is this grey in every channel, the field lies
+# From scripts/visual_check.py: the ball is this gray in every channel, the field lies
 # between these raw rows, and the agent's paddle starts at this raw column.
 BALL_SHADE = 236
 RAW_FIELD_TOP, RAW_FIELD_BOTTOM = 34, 193
@@ -52,14 +53,21 @@ MAX_RALLY_SEEDS = 100
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Record one checkpoint's evaluation episode as a clip.")
-    parser.add_argument("checkpoint", help="path to a step_NNNNNNNN.pt file")
-    parser.add_argument("--out", default=None,
+    parser.add_argument("checkpoint", type=os.path.expanduser, help="path to a step_NNNNNNNN.pt file")
+    parser.add_argument("--out", type=os.path.expanduser, default=None,
                         help="defaults to <run_dir>/clips/<checkpoint name>.mp4")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--epsilon", type=float, default=EVAL_EPSILON)
     parser.add_argument("--rally", action="store_true",
                         help="apply the first rally clip rule: search seeds for a rally and cut around it")
-    return parser.parse_args()
+    parser.add_argument("--overwrite", action="store_true",
+                        help="replace a clip already at --out instead of refusing")
+    args = parser.parse_args()
+    # Otherwise ffmpeg rejects it only after both plays.
+    if args.out is not None and not args.out.lower().endswith(".mp4"):
+        parser.error(f"--out must end in .mp4, got {args.out}")
+    check_eval_args(parser, args)
+    return args
 
 
 def ball_x(frame: np.ndarray) -> float | None:
@@ -69,14 +77,14 @@ def ball_x(frame: np.ndarray) -> float | None:
 
 
 def return_frames(frames: list[np.ndarray]) -> list[int]:
-    """Return the frames where the ball, moving toward the agent, turns back beside its paddle."""
+    # The frames where the ball, moving toward the agent, turns back beside its paddle.
     xs = [ball_x(frame) for frame in frames]
     return [i for i in range(1, len(xs) - 1)
             if None not in xs[i - 1:i + 2] and xs[i - 1] < xs[i] > xs[i + 1] and xs[i] > RETURN_ZONE]
 
 
 def rally_start(returns: list[int]) -> int | None:
-    """Return the first return that begins RALLY_RETURNS returns within one clip window."""
+    # The first return that begins RALLY_RETURNS returns within one clip window.
     for i in range(len(returns) - RALLY_RETURNS + 1):
         if returns[i + RALLY_RETURNS - 1] - returns[i] < CLIP_FRAMES:
             return returns[i]
@@ -121,9 +129,13 @@ if __name__ == "__main__":
     out = args.out or os.path.join(run_dir, "clips", f"{name}.mp4")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     stem = os.path.splitext(out)[0]
+    # A rerun with other settings would otherwise replace a clip already checked.
+    existing = [path for path in (out, f"{stem}_q.json", f"{stem}.json") if os.path.exists(path)]
+    if existing and not args.overwrite:
+        sys.exit(f"{', '.join(existing)} already exist(s). Pass --overwrite to replace, or choose another --out.")
 
     started = time.perf_counter()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = pick_device()
     print(f"Checkpoint: {checkpoint}")
 
     seed = args.seed

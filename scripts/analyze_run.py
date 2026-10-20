@@ -14,6 +14,7 @@ import glob
 import json
 import math
 import os
+import re
 import subprocess
 from datetime import datetime
 
@@ -65,8 +66,9 @@ CONFIG_KEYS = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Report a run's figures from its own logs.")
-    parser.add_argument("run_dir", help="directory holding episodes.csv, gpu_log.csv and run_config.json")
-    parser.add_argument("--compare", help="another run directory to compare this one against")
+    parser.add_argument("run_dir", type=os.path.expanduser,
+                        help="directory holding episodes.csv, gpu_log.csv, and run_config.json")
+    parser.add_argument("--compare", type=os.path.expanduser, help="another run directory to compare this one against")
     return parser.parse_args()
 
 
@@ -447,7 +449,7 @@ def report_paddle(steps: list[int], counts: list[list[int]]) -> None:
 
 def report_replay(rows: list[dict[str, str]], steps: list[int], episodes: list[dict[str, str]],
                   config: dict) -> None:
-    # The row at warmup_steps holds a single batch, so only full windows are summarised.
+    # The row at warmup_steps holds a single batch, so only full windows are summarized.
     full = config["metrics_every_steps"] // config["train_every"]
     sampled = [i for i, r in enumerate(rows) if r["batches_in_window"] and int(r["batches_in_window"]) == full]
     if not sampled:
@@ -530,8 +532,13 @@ def report_throughput(run: dict) -> None:
         line("training forward passes", f"{updates * config['batch_size'] * NETWORKS_PER_UPDATE:,}")
 
     if config:
-        checkpoints = os.path.join(config["output_dir"], "checkpoints")
-        if os.path.isdir(checkpoints):
+        # The recorded path is the training machine's, so on another machine look in
+        # its own ~/pong-runs, where the release downloads go.
+        name = re.split(r"[\\/]", config["output_dir"].rstrip("\\/"))[-1]
+        candidates = [config["output_dir"], os.path.join(os.path.expanduser("~"), "pong-runs", name)]
+        checkpoints = next((os.path.join(c, "checkpoints") for c in candidates
+                            if os.path.isdir(os.path.join(c, "checkpoints"))), "")
+        if checkpoints:
             files = [os.path.join(checkpoints, f) for f in os.listdir(checkpoints) if f.endswith(".pt")]
             size = sum(os.path.getsize(f) for f in files)
             line("checkpoints on disk", f"{len(files)} files, {size / BYTES_PER_GIB:.2f} GiB, "

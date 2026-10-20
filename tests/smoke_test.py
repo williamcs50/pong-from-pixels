@@ -8,6 +8,7 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.action_selector import select_action
+from src.device import pick_device
 from src.preprocess import Preprocessor
 from src.q_network import QNetwork
 from src.replay_buffer import ReplayBuffer
@@ -23,7 +24,7 @@ BATCH_SIZE = 8
 # integration this test exists to check.
 EPSILON = 0.0
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = pick_device()
 
 
 def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
@@ -54,7 +55,7 @@ def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
         action = select_action(q_values, EPSILON, n_actions)
         assert 0 <= action < n_actions, f"Action {action} is not a valid index into {n_actions} actions"
 
-        obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, _ = env.step(action)
         if terminated or truncated:
             obs, _ = env.reset()
             next_stacked = prep.reset(obs)
@@ -70,7 +71,7 @@ def run_acting_loop() -> tuple[ReplayBuffer, QNetwork, int]:
 
 def test_acting_path() -> None:
     # Runs the live batch of one state through the transform, the network,
-    # select_action, and env.step at every step. The per-step assertions live
+    # select_action, and env.step at every step. The per step assertions live
     # in run_acting_loop, so this only confirms the full loop completes.
     _, _, n_actions = run_acting_loop()
     print(f"PASS  acting path: {N_STEPS} steps, valid actions, q_values (1, {n_actions}), no NaN, on {DEVICE.type}")

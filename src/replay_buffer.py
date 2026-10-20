@@ -1,3 +1,7 @@
+# src/replay_buffer.py
+# A fixed size store of past moves that training samples batches from. Once full,
+# each new move replaces the oldest.
+
 import numpy as np
 
 

@@ -22,7 +22,9 @@ EXTERNAL = (
     "the 90 checkpoints", "12 of the 30 windows", "7 to 9 points", "about 95 percent",
     "roughly 95 million", "8,000,000 frames", "Nature's 50,000,000", "Nature's 1,000,000",
     "1.2M", "across 200 episodes", "gained 2.56 points", "about 5 combined", "about 50 minutes",
-    "51.3 W", "or 51 W",
+    "51.3 W", "or 51 W", "RMSProp at 0.00025",
+    # Measured from the checkpoints on disk, which a fresh clone doesn't have.
+    "3.03 GiB", "3.26 GB", "1.02 GiB", "1.09 GB", "41 files",
     "first 30 seconds", "450 frames at 15 fps", "frame 450", "six Q values", "304 steps longer", "last 30 seconds", "last 30 end", "last 450 frames",
     "seeds 0 to 8", "six of the nine", "seeds 0, 1, 2", "at least 3 returns within 30 seconds",
     "starts 2 seconds before",
@@ -44,7 +46,7 @@ def numbers(text: str) -> set[str]:
 
 def unprinted(doc: str, output: str) -> list[str]:
     """Return the numbers a write up quotes that the analyzer output never prints."""
-    # Commands, code, links, dates and clock times are not figures.
+    # Commands, code, links, dates, and clock times are not figures.
     body = re.sub(r"```.*?```", "", doc, flags=re.S)
     body = re.sub(r"`[^`]*`|\[[^\]]*\]\([^)]*\)|20\d\d-\d\d-\d\d|\d\d:\d\d(:\d\d)?", "", body)
     body = re.sub(r"\s+", " ", body)

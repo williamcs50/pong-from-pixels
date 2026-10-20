@@ -79,6 +79,14 @@ two instrumentation rows. My reasoning for the shared values is in the 2026-10-0
 entry of [sessions.md](../sessions.md), and for the instrumentation in the 2026-10-09
 entry.
 
+The learning rate is the one shared value that doesn't come from Nature. Nature used
+RMSProp at 0.00025, and a learning rate doesn't carry over from one optimizer to
+another. Adam at 1e-4 is the documented DQN default in
+[Stable Baselines3](https://stable-baselines3.readthedocs.io/en/v2.3.2/modules/dqn.html),
+with the same batch size of 32 and gamma of 0.99. It differs from mine in other ways,
+like the buffer size and how often the target syncs, so it backs the learning rate,
+not the whole config.
+
 ---
 
 ## Results
@@ -208,7 +216,7 @@ the 31 differ by more than two standard errors**. That tells me 100 episodes at 
 policy, not to which episodes it happened to get scored on.
 
 **Two checkpoints collapse and then recover, and both seeds show it.** 4,600,000
-scores +7.23 and +7.13, between neighbours at +14.60 and +12.14. 3,600,000 scores +6.19
+scores +7.23 and +7.13, between neighbors at +14.60 and +12.14. 3,600,000 scores +6.19
 and +5.88, between +7.88 and +14.99. Both dips are 7 to 9 points deep. The 3,600,000
 one lands inside the stretch where the training plateau definition fired, and a
 trailing mean covering about 250,000 steps can't see a dip that short.
@@ -297,14 +305,14 @@ fraction, is the most honest answer to which one started rising first.
 share.** The argmax counts are grouped by what each action does to the agent's
 paddle. That grouping comes from Check 6 in `scripts/visual_check.py`, which drove each
 action and measured the paddle, since the action names alone don't prove anything: 2
-and 4 move it up, 3 and 5 move it down, 0 and 1 leave it still. With no preference,
+and 4 move it up, 3 and 5 move it down, and 0 and 1 leave it still. With no preference,
 the network would split the 500 states evenly, about 167 per group.
 
 At step 0, all 500 states pick still. The untrained network just happens to rate
 action 0 highest everywhere, so that isn't anything learned. Still dropped to 316
 states by 200,000 and to 20 by 800,000, but it didn't stay down. From 1,000,000 on, the
 200,000 step rows put it between 57 and 176. From 3,000,000 on, the averages were
-213.9 up, 170.0 down and 116.1 still. After 510,000, still reached an even share on
+213.9 up, 170.0 down, and 116.1 still. After 510,000, still reached an even share on
 only seven rows: six between 2,290,000 and 2,650,000, and one at 5,570,000.
 
 These summaries were picked after the 200,000 step table had been seen. As with Q,
@@ -326,11 +334,11 @@ the share of transitions sampled in each 10,000 step window where a point was sc
 `batch_done_fraction` is the share that end an episode. Both count the batches the
 updates actually trained on. Over the 595 windows with a full 2,500 batches, the
 reward fraction peaked at 0.025525 at 540,000, about one point every 40 steps. It fell
-to 0.005387 at 3,160,000 as rallies got longer. From 3,400,000 on, every 200,000 step
+to 0.005387 at 3,160,000 as rallies grew longer. From 3,400,000 on, every 200,000 step
 row sits between 0.00914 and 0.01181, and it ended at 0.009787. That late rise lines up
 with the episode length finding in Evaluation: an agent that's winning plays shorter
 games, so points come more often. One thing to keep in mind is that the buffer holds
-the last 100,000 transitions, so these fractions lag the agent's behaviour by up to
+the last 100,000 transitions, so these fractions lag the agent's behavior by up to
 that many steps.
 
 **The batch counters agree with the episode log.** One side always reaches 21, so
@@ -338,8 +346,8 @@ every episode has 42 minus the absolute reward in points. That means the episode
 inside the buffer's 100,000 step span predict what a uniform sample from it should
 contain. Across the 595 full windows, the logged reward fraction is off from that
 prediction by a mean of +0.06 sampling standard errors, with a spread of 0.94, and 577
-rows land within 2. The done fraction gives +0.02, 1.01 and 572. Pure sampling noise
-would give a mean of 0, a spread of 1 and about 95 percent within 2, which is what
+rows land within 2. The done fraction gives +0.02, 1.01, and 572. Pure sampling noise
+would give a mean of 0, a spread of 1, and about 95 percent within 2, which is what
 these look like. So the counters measure what they're supposed to.
 
 | Step | `q_max_mean` | `q_spread_mean` | Up | Down | Still | Reward fraction |
@@ -378,7 +386,7 @@ per second, against 240.7 once updates started.
 
 **The GPU logger covered the whole run.** Its 827 timestamps go from 11:48:51 to
 18:42:33. It started 31 seconds before the run and kept going after it ended. The gaps
-between samples only range from 30.031 to 30.123 seconds, so nothing got dropped. Run
+between samples only range from 30.031 to 30.123 seconds, so nothing was dropped. Run
 1's first attempt gave me a zero byte file, because `nvidia-smi -l 30 -f` buffered its
 output. This is the proof that the `Add-Content` replacement writes as it goes.
 
@@ -512,7 +520,7 @@ independent of the policy it's measuring. The downside is that the Q figures des
 states the trained agent rarely sees, not the ones it actually plays from.
 
 **The run didn't record its software versions.** The venv I launched it from has Python
-3.11.0, torch 2.12.1+cu126 with CUDA 12.6, gymnasium 1.3.0, ale-py 0.12.0 and numpy
+3.11.0, torch 2.12.1+cu126 with CUDA 12.6, gymnasium 1.3.0, ale-py 0.12.0, and numpy
 2.4.6, all installed on 2026-06-20 and unchanged since. So these are very likely what
 it ran on. Runs from now on record them in `run_config.json`.
 
@@ -526,7 +534,7 @@ those 31, and a better one could be sitting between two of them.
 
 Every number above that comes from Run 2's own files comes out of one command, run
 from the repository root. That includes the config, training, evaluation,
-instrumentation, hardware and clip selection figures, along with the rescore in
+instrumentation, hardware, and clip selection figures, along with the rescore in
 `eval_lengths.csv` and each clip rule's pick:
 
 ```powershell
@@ -554,8 +562,8 @@ Both sweeps were written before the sweep added its `std_episode_steps` column. 
 refuses to append to a file with different columns, so a rerun needs a new `--out`:
 
 ```powershell
-python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --out $HOME\pong-runs\run-02\eval_rerun.csv
-python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --seed 1 --out $HOME\pong-runs\run-02\eval_seed1_rerun.csv
+python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --out ~/pong-runs/run-02/eval_rerun.csv
+python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --seed 1 --out ~/pong-runs/run-02/eval_seed1_rerun.csv
 ```
 
 The first rally rule in Clip selection uses
@@ -564,15 +572,12 @@ The first rally rule in Clip selection uses
 `std_episode_steps` column and `--through` option, which weren't committed yet.
 [run-02/eval_lengths_config.json](run-02/eval_lengths_config.json) records that as
 `git_dirty`. They were committed afterward in `63ea0da`, along with one later edit that
-doesn't affect scoring: recording the software versions in the sweep's config. Its mean reward, reward spread and mean episode length match `eval.csv`
+doesn't affect scoring: recording the software versions in the sweep's config. Its mean reward, reward spread, and mean episode length match `eval.csv`
 exactly on all six checkpoints. It took 17.9 minutes:
 
 ```powershell
-python scripts/sweep_eval.py $HOME\pong-runs\run-02 --every 200000 --through 1000000 --out $HOME\pong-runs\run-02\eval_lengths.csv
+python scripts/sweep_eval.py ~/pong-runs/run-02 --every 200000 --through 1000000 --out ~/pong-runs/run-02/eval_lengths.csv
 ```
-
-In PowerShell, use `$HOME` instead of `~`. PowerShell passes `~` to the script as is,
-and the script doesn't expand it.
 
 The 256.1 steps per second my projection used comes from the warmup pass. Comparing
 against it gives the 6.47 hour projection and the 6.3 percent miss:

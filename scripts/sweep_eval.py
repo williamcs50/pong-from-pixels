@@ -1,8 +1,8 @@
 # scripts/sweep_eval.py
 # Evaluate a run's checkpoints, one row per checkpoint, so the evaluation curve can
 # be read against the bar instead of training reward standing in for it. Rows append
-# as each finishes and ones already in the file are skipped, so a sweep that dies
-# partway restarts without redoing work.
+# as each finishes and ones already in the file with the same settings are skipped,
+# so a sweep that dies partway restarts without redoing work.
 #
 #   python scripts/sweep_eval.py <run_dir> --every 200000
 
@@ -17,9 +17,8 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import torch
-
-from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, evaluate
+from src.device import pick_device
+from src.evaluate import EVAL_EPISODES, EVAL_EPSILON, check_eval_args, evaluate
 from src.git_info import git_state, software_versions
 
 COLUMNS = ["env_step", "episodes", "epsilon", "seed", "mean_reward", "std_reward",
@@ -28,7 +27,7 @@ COLUMNS = ["env_step", "episodes", "epsilon", "seed", "mean_reward", "std_reward
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate every Nth checkpoint of a run.")
-    parser.add_argument("run_dir", help="a run directory holding checkpoints/")
+    parser.add_argument("run_dir", type=os.path.expanduser, help="a run directory holding checkpoints/")
     parser.add_argument(
         "--every",
         type=int,
@@ -42,8 +41,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repeat-action-probability", type=float, default=0.0)
     parser.add_argument("--through", type=int, default=None,
                         help="evaluate only checkpoints up to and including this step")
-    parser.add_argument("--out", default=None, help="defaults to <run_dir>/eval.csv")
-    return parser.parse_args()
+    parser.add_argument("--out", type=os.path.expanduser, default=None, help="defaults to <run_dir>/eval.csv")
+    args = parser.parse_args()
+    check_eval_args(parser, args)
+    if args.every < 1:
+        parser.error(f"--every must be 1 or more, got {args.every}")
+    return args
 
 
 def checkpoints_to_evaluate(checkpoint_dir: str, every: int) -> list[tuple[int, str]]:
@@ -63,7 +66,7 @@ def record_invocation(path: str, settings: dict) -> None:
 
     # A list rather than one object, because the sweep resumes: a restart after a
     # code change produces rows from a different commit and both need recording.
-    # Not refused on a dirty tree the way train() is, since re-scoring a checkpoint
+    # Not refused on a dirty tree the way train() is, since rescoring a checkpoint
     # mid development is normal. The dirty flag says so instead.
     history = json.load(open(path)) if os.path.exists(path) else []
     history.append({**settings, **git_state(), **software_versions(),
@@ -73,7 +76,7 @@ def record_invocation(path: str, settings: dict) -> None:
         json.dump(history, handle, indent=2)
 
 
-def already_done(out_path: str) -> set[int]:
+def already_done(out_path: str, *, episodes: int, epsilon: float, seed: int) -> set[int]:
     if not os.path.exists(out_path):
         return set()
 
@@ -88,12 +91,23 @@ def already_done(out_path: str) -> set[int]:
                 f"{COLUMNS}. Delete it or point --out somewhere else."
             )
 
-        return {int(row["env_step"]) for row in reader}
+        done = set()
+        for row in reader:
+            # Resuming matches on step alone, so a row scored with other settings
+            # would count as done and the sweep would skip it without saying so.
+            found = (int(row["episodes"]), float(row["epsilon"]), int(row["seed"]))
+            if found != (episodes, epsilon, seed):
+                raise ValueError(
+                    f"{out_path} step {row['env_step']} was scored with episodes, epsilon, seed "
+                    f"{found}, this sweep uses {(episodes, epsilon, seed)}. Point --out somewhere else."
+                )
+            done.add(int(row["env_step"]))
+        return done
 
 
 if __name__ == "__main__":
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = pick_device()
 
     checkpoint_dir = os.path.join(args.run_dir, "checkpoints")
     out_path = args.out or os.path.join(args.run_dir, "eval.csv")
@@ -101,7 +115,14 @@ if __name__ == "__main__":
     targets = checkpoints_to_evaluate(checkpoint_dir, args.every)
     if args.through is not None:
         targets = [(step, path) for step, path in targets if step <= args.through]
-    done = already_done(out_path)
+    # Otherwise this prints "nothing to do" and exits as if the sweep had finished.
+    if not targets:
+        sys.exit(f"no checkpoint in {checkpoint_dir} is at a multiple of {args.every:,}"
+                 + (f" up to {args.through:,}" if args.through is not None else ""))
+    try:
+        done = already_done(out_path, episodes=args.episodes, epsilon=args.epsilon, seed=args.seed)
+    except ValueError as error:
+        sys.exit(str(error))
     pending = [(step, path) for step, path in targets if step not in done]
 
     print(f"Device: {device}")

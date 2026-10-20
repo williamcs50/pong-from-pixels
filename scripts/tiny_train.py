@@ -1,7 +1,7 @@
 # scripts/tiny_train.py
-# Run the real training loop at a size that finishes in a minute or two on the
-# MacBook Air. This proves the pipeline runs together without falling over, not
-# that the agent learns. Only the numbers that control time and memory shrink.
+# Run the real training loop at a size that finishes in seconds. This proves the
+# pipeline runs together without falling over, not that the agent learns. Only the
+# numbers that control time and memory shrink.
 
 import os
 import sys
